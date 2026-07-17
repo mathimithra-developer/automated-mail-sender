@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signup - Mail Sender</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1 class="auth-title">Mail Sender</h1>
+        <p class="auth-subtitle">Create an organization and start sending emails</p>
+      </div>
+
+      <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+      <form id="signupForm">
+        <div class="form-group">
+          <label class="form-label" for="orgName">Organization Name</label>
+          <div class="input-wrapper">
+            <i data-lucide="building-2"></i>
+            <input
+              type="text"
+              id="orgName"
+              name="orgName"
+              required
+              placeholder="Acme Corp"
+              class="form-input"
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="name">Your Full Name</label>
+          <div class="input-wrapper">
+            <i data-lucide="user"></i>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              required
+              placeholder="Jane Doe"
+              class="form-input"
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address</label>
+          <div class="input-wrapper">
+            <i data-lucide="mail"></i>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              placeholder="you@organization.com"
+              class="form-input"
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-wrapper">
+            <i data-lucide="lock"></i>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              placeholder="••••••••"
+              class="form-input"
+            >
+          </div>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn">
+          Get Started
+        </button>
+      </form>
+
+      <p class="auth-footer">
+        Already have an account? 
+        <a href="login" class="auth-link">Sign in</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    const form = document.getElementById("signupForm");
+    const errorDiv = document.getElementById("errorMessage");
+    const submitBtn = document.getElementById("submitBtn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorDiv.style.display = "none";
+      submitBtn.disabled = true;
+      submitBtn.innerText = "Creating Organization...";
+
+      const orgName = document.getElementById("orgName").value;
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        const response = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ orgName, name, email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          window.location.href = "/dashboard";
+        } else {
+          errorDiv.innerText = data.error || "Signup failed";
+          errorDiv.style.display = "block";
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Get Started";
+        }
+      } catch (err) {
+        console.error(err);
+        errorDiv.innerText = "Something went wrong. Ensure the backend database is running.";
+        errorDiv.style.display = "block";
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Get Started";
+      }
+    });
+  </script>
+</body>
+</html>

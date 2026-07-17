@@ -1,0 +1,249 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum SubscribeStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+  BOUNCED
+  COMPLAINED
+}
+
+enum SegmentType {
+  DYNAMIC
+  STATIC
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  COMPLETED
+  FAILED
+}
+
+enum EmailEventType {
+  DELIVERED
+  OPEN
+  CLICK
+  BOUNCE
+  COMPLAINT
+  UNSUBSCRIBE
+}
+
+model Organization {
+  id            String            @id @default(cuid())
+  name          String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  
+  users         User[]
+  customers     Customer[]
+  segments      Segment[]
+  templates     EmailTemplate[]
+  campaigns     Campaign[]
+  emailSettings OrgEmailSettings?
+}
+
+model User {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  password       String       // Hashed
+  name           String
+  role           UserRole     @default(MEMBER)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model OrgEmailSettings {
+  id              String       @id @default(cuid())
+  organizationId  String       @unique
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  senderName      String
+  senderEmail     String
+  replyTo         String
+  verifiedDomain  String?
+  dailyLimit      Int          @default(1000)
+  monthlyLimit    Int          @default(30000)
+  
+  // ESP / SMTP config parameters
+  espProvider     String       @default("SMTP") // "RESEND", "POSTMARK", "SMTP"
+  espApiKey       String       @default("")     // Default empty, user adds later
+  smtpHost        String?
+  smtpPort        Int?
+  smtpUser        String?
+  smtpPass        String?      // Encrypted
+  
+  physicalAddress String?      // Required for CAN-SPAM footers
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model Customer {
+  id             String            @id @default(cuid())
+  email          String
+  firstName      String?
+  lastName       String?
+  phone          String?
+  customFields   Json              @default("{}") // Store arbitrary metadata
+  tags           String[]          // PostgreSQL native string array for fast filtering
+  status         SubscribeStatus   @default(SUBSCRIBED)
+  source         String            @default("MANUAL") // "CSV_IMPORT", "MANUAL", "API"
+  
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  segments       CustomerSegment[]
+  recipients     CampaignRecipient[]
+  emailEvents    EmailEvent[]
+  
+  lastSentAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([email, organizationId]) // Emails are unique per organization
+}
+
+model Segment {
+  id             String            @id @default(cuid())
+  name           String
+  description    String?
+  type           SegmentType       @default(STATIC)
+  
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  rules          SegmentRule[]
+  customers      CustomerSegment[]
+  campaigns      CampaignSegment[]
+  
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model SegmentRule {
+  id        String   @id @default(cuid())
+  segmentId String
+  segment   Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  
+  field     String   // e.g. "tags", "email", "firstName", "custom_field_name"
+  operator  String   // e.g. "EQUALS", "CONTAINS", "GREATER_THAN", "IS_EMPTY"
+  value     String   // Value to compare against
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CustomerSegment {
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  segmentId  String
+  segment    Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now())
+
+  @@id([customerId, segmentId])
+}
+
+model EmailTemplate {
+  id             String       @id @default(cuid())
+  name           String
+  subject        String
+  htmlContent    String       // Output HTML markup
+  designJson     Json?        // Stores block configuration state (for builder GUI reload)
+  
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  campaigns      Campaign[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Campaign {
+  id                 String              @id @default(cuid())
+  name               String
+  subject            String
+  
+  templateId         String
+  template           EmailTemplate       @relation(fields: [templateId], references: [id])
+  
+  organizationId     String
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  status             CampaignStatus      @default(DRAFT)
+  scheduledAt        DateTime?
+  sentAt             DateTime?
+  
+  segments           CampaignSegment[]
+  recipients         CampaignRecipient[]
+  emailEvents        EmailEvent[]
+  
+  // Cached performance counters
+  totalRecipients    Int                 @default(0)
+  sentCount          Int                 @default(0)
+  openedCount        Int                 @default(0)
+  clickedCount       Int                 @default(0)
+  bouncedCount       Int                 @default(0)
+  complainedCount    Int                 @default(0)
+  unsubscribedCount  Int                 @default(0)
+  
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model CampaignSegment {
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  segmentId  String
+  segment    Segment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, segmentId])
+}
+
+model CampaignRecipient {
+  id           String   @id @default(cuid())
+  campaignId   String
+  campaign     Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  status       String   @default("PENDING") // "PENDING", "SENT", "FAILED"
+  errorMessage String?
+  messageId    String?  // Track message reference IDs returned by Resend / Postmark
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([campaignId, customerId])
+}
+
+model EmailEvent {
+  id         String         @id @default(cuid())
+  campaignId String
+  campaign   Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  type       EmailEventType
+  url        String?        // Clicked links tracking
+  userAgent  String?
+  ipAddress  String?
+  timestamp  DateTime       @default(now())
+  
+  createdAt  DateTime       @default(now())
+}
