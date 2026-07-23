@@ -128,10 +128,10 @@ export const AssetsPage: React.FC = () => {
             <p className="dashed-desc">Upload your first image or generate one using Together AI.</p>
           </div>
         ) : (
-          assets.map((ast) => {
+          assets.map((ast, idx) => {
             const sizeKb = ast.size ? `${(ast.size / 1024).toFixed(1)} KB` : '12.4 KB';
             return (
-              <div key={ast._id} className="asset-item">
+              <div key={ast._id ? `${ast._id}-${idx}` : `ast-${idx}`} className="asset-item">
                 <img src={ast.url} alt={ast.filename} />
                 <div className="asset-actions">
                   <button

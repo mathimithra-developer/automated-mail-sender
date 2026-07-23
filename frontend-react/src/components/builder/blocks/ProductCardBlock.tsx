@@ -3,15 +3,11 @@ import { ProductCardBlockData } from '../types';
 
 interface ProductCardBlockProps {
   block: ProductCardBlockData;
-  isSelected: boolean;
-  onSelect: () => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
-export const ProductCardBlock: React.FC<ProductCardBlockProps> = ({
-  block,
-  isSelected,
-  onSelect,
-}) => {
+export const ProductCardBlock: React.FC<ProductCardBlockProps> = ({ block }) => {
   const {
     imageUrl = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80',
     title = 'Wireless Noise-Canceling Headphones',
@@ -26,23 +22,15 @@ export const ProductCardBlock: React.FC<ProductCardBlockProps> = ({
 
   return (
     <div
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
-      className={`builder-block-wrapper ${isSelected ? 'selected' : ''}`}
       style={{
-        position: 'relative',
         padding: '16px',
-        margin: '4px 0',
         borderRadius: `${borderRadius}px`,
-        cursor: 'pointer',
-        border: isSelected ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+        border: '1px solid #e2e8f0',
         background: '#ffffff',
-        boxShadow: isSelected
-          ? '0 0 0 3px rgba(59, 130, 246, 0.15)'
-          : '0 4px 12px rgba(0,0,0,0.04)',
-        transition: 'all 0.15s',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
+        width: '100%',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -51,9 +39,12 @@ export const ProductCardBlock: React.FC<ProductCardBlockProps> = ({
           alt={title}
           style={{
             width: '100%',
+            maxWidth: '100%',
             maxHeight: 220,
             objectFit: 'cover',
             borderRadius: `${Math.max(0, borderRadius - 2)}px`,
+            display: 'block',
+            boxSizing: 'border-box',
           }}
         />
 
@@ -108,27 +99,6 @@ export const ProductCardBlock: React.FC<ProductCardBlockProps> = ({
           </a>
         </div>
       </div>
-
-      {isSelected && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -10,
-            right: 12,
-            background: '#3b82f6',
-            color: '#ffffff',
-            fontSize: '10px',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '4px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            pointerEvents: 'none',
-          }}
-        >
-          Product Card
-        </div>
-      )}
     </div>
   );
 };

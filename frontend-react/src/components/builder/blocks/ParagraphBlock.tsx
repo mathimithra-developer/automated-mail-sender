@@ -3,15 +3,14 @@ import { ParagraphBlockData } from '../types';
 
 interface ParagraphBlockProps {
   block: ParagraphBlockData;
-  isSelected: boolean;
-  onSelect: () => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
   onChange: (updatedContent: ParagraphBlockData['content']) => void;
   onDelete?: () => void;
 }
 
 export const ParagraphBlock: React.FC<ParagraphBlockProps> = ({
   block,
-  isSelected,
   onSelect,
   onChange,
 }) => {
@@ -50,7 +49,7 @@ export const ParagraphBlock: React.FC<ParagraphBlockProps> = ({
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSelect();
+    if (onSelect) onSelect();
     setIsInlineEditing(true);
   };
 
@@ -69,22 +68,8 @@ export const ParagraphBlock: React.FC<ParagraphBlockProps> = ({
 
   return (
     <div
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
       onDoubleClick={handleDoubleClick}
-      className={`builder-block-wrapper ${isSelected ? 'selected' : ''}`}
-      style={{
-        position: 'relative',
-        padding: '12px 16px',
-        margin: '4px 0',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        border: isSelected ? '2px solid #3b82f6' : '1px dashed transparent',
-        boxShadow: isSelected ? '0 0 0 3px rgba(59, 130, 246, 0.15)' : 'none',
-        transition: 'border-color 0.15s, box-shadow 0.15s',
-      }}
+      style={{ padding: '4px 0', width: '100%', boxSizing: 'border-box' }}
     >
       {isInlineEditing ? (
         <textarea
@@ -105,27 +90,6 @@ export const ParagraphBlock: React.FC<ParagraphBlockProps> = ({
         />
       ) : (
         <p style={paragraphStyle}>{text || 'Enter paragraph text...'}</p>
-      )}
-
-      {isSelected && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -10,
-            right: 12,
-            background: '#3b82f6',
-            color: '#ffffff',
-            fontSize: '10px',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '4px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            pointerEvents: 'none',
-          }}
-        >
-          Paragraph
-        </div>
       )}
     </div>
   );

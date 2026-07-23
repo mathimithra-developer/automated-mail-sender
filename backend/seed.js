@@ -27,9 +27,11 @@ function attr(k, value) {
 const daysAgo = (n) => new Date(Date.now() - n * 86_400_000);
 
 // ─────────────────────────────────────────────────────────────────────────────
-async function seed() {
-  await mongoose.connect(MONGO_URI);
-  console.log('✅ Connected to MongoDB');
+export async function seedData(shouldConnectAndDisconnect = true) {
+  if (shouldConnectAndDisconnect) {
+    await mongoose.connect(MONGO_URI);
+    console.log('✅ Connected to MongoDB');
+  }
 
   // ── Wipe existing demo data ───────────────────────────────────────────────
   await Promise.all([
@@ -396,11 +398,15 @@ async function seed() {
   console.log('  DB:   ', MONGO_URI);
   console.log('═══════════════════════════════════════════════════\n');
 
-  await mongoose.disconnect();
+  if (shouldConnectAndDisconnect) {
+    await mongoose.disconnect();
+  }
 }
 
-seed().catch(err => {
-  console.error('❌ Seed failed:', err);
-  mongoose.disconnect();
-  process.exit(1);
-});
+if (process.argv[1]?.endsWith('seed.js')) {
+  seedData(true).catch(err => {
+    console.error('❌ Seed failed:', err);
+    mongoose.disconnect();
+    process.exit(1);
+  });
+}

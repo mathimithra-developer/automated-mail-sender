@@ -42,73 +42,88 @@ export const DashboardPage: React.FC = () => {
   const [topSegments, setTopSegments] = useState<any[]>([]);
   const [recentCustomers, setRecentCustomers] = useState<any[]>([]);
 
-  const loadDashboard = async () => {
-    setLoading(true);
+  const loadDashboard = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
-      const [statsRes, custRes] = await Promise.all([
-        api.get('/api/dashboard/stats').catch(() => null),
-        api.get('/api/customers?limit=5').catch(() => null),
-      ]);
+      const statsRes: any = await api.get('/api/dashboard/stats').catch(() => null);
 
-      if (statsRes?.stats) {
+      if (statsRes && statsRes.success && statsRes.stats) {
+        const s = statsRes.stats;
         setStats({
-          customers: statsRes.stats.customers || 0,
-          activeCustomers: statsRes.stats.activeCustomers || 0,
-          unsubCustomers: statsRes.stats.unsubscribed || 0,
-          segments: statsRes.stats.segments || 0,
-          templates: statsRes.stats.templates || 0,
-          campaigns: statsRes.stats.campaigns || 0,
-          abTests: statsRes.stats.abtests || 0,
-          totalSent: statsRes.stats.totalSent || 0,
-          totalOpened: Math.round(((statsRes.stats.openRate || 0) / 100) * (statsRes.stats.totalSent || 0)),
-          totalClicked: Math.round(((statsRes.stats.clickRate || 0) / 100) * (statsRes.stats.totalSent || 0)),
-          openRate: (statsRes.stats.openRate || 0).toString(),
-          clickRate: (statsRes.stats.clickRate || 0).toString(),
+          customers: s.customers || 0,
+          activeCustomers: s.activeCustomers || 0,
+          unsubCustomers: s.unsubscribed || 0,
+          segments: s.segments || 0,
+          templates: s.templates || 0,
+          campaigns: s.campaigns || 0,
+          abTests: s.abtests || 0,
+          totalSent: s.totalSent || 0,
+          totalOpened: s.totalOpened ?? Math.round(((s.openRate || 0) / 100) * (s.totalSent || 0)),
+          totalClicked: s.totalClicked ?? Math.round(((s.clickRate || 0) / 100) * (s.totalSent || 0)),
+          openRate: (s.openRate || 0).toString(),
+          clickRate: (s.clickRate || 0).toString(),
         });
 
-        setRecentCampaigns(statsRes.recentCampaigns || []);
-        setTopSegments(statsRes.topSegments || []);
+        if (statsRes.recentCampaigns) setRecentCampaigns(statsRes.recentCampaigns);
+        if (statsRes.topSegments) setTopSegments(statsRes.topSegments);
+        if (statsRes.recentCustomers) setRecentCustomers(statsRes.recentCustomers);
       } else {
-        const [cRes, sRes, tRes, cmpRes, abRes] = await Promise.all([
-          api.get('/api/customers?limit=1'),
-          api.get('/api/segments?limit=10'),
-          api.get('/api/templates?limit=1'),
-          api.get('/api/campaigns?limit=5'),
-          api.get('/api/abtests?limit=1'),
+        const [cRes, sRes, tRes, cmpRes, abRes, custRes] = await Promise.all([
+          api.get('/api/customers?limit=1').catch(() => null),
+          api.get('/api/segments?limit=10').catch(() => null),
+          api.get('/api/templates?limit=1').catch(() => null),
+          api.get('/api/campaigns?limit=5').catch(() => null),
+          api.get('/api/abtests?limit=1').catch(() => null),
+          api.get('/api/customers?limit=5').catch(() => null),
         ]);
 
-        const customers = cRes.pagination?.total || 0;
+        const customers = cRes?.pagination?.total || 0;
         setStats((prev) => ({
           ...prev,
           customers,
           activeCustomers: Math.round(customers * 0.9),
           unsubCustomers: Math.round(customers * 0.05),
-          segments: sRes.pagination?.total || 0,
-          templates: tRes.pagination?.total || 0,
-          campaigns: cmpRes.pagination?.total || 0,
-          abTests: abRes.pagination?.total || 0,
+          segments: sRes?.pagination?.total || 0,
+          templates: tRes?.pagination?.total || 0,
+          campaigns: cmpRes?.pagination?.total || 0,
+          abTests: abRes?.pagination?.total || 0,
         }));
-        setRecentCampaigns(cmpRes.data || []);
-        setTopSegments((sRes.data || []).slice(0, 5));
+        if (cmpRes?.data) setRecentCampaigns(cmpRes.data);
+        if (sRes?.data) setTopSegments((sRes.data || []).slice(0, 5));
+        if (custRes?.data) setRecentCustomers(custRes.data);
       }
-
-      setRecentCustomers(custRes?.data || []);
     } catch (err) {
-      console.error('Error loading dashboard data:', err);
+      console.error('Error loading real-time dashboard data:', err);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDashboard();
+    loadDashboard(false);
+
+    // Real-time polling every 8 seconds
+    const interval = setInterval(() => {
+      loadDashboard(true);
+    }, 8000);
+
+    // Refresh instantly when window returns to focus
+    const handleFocus = () => {
+      loadDashboard(true);
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const hr = new Date().getHours();
   const greeting = hr < 12 ? 'Good Morning' : hr < 17 ? 'Good Afternoon' : 'Good Evening';
 
   const handleManualRefresh = async () => {
-    await loadDashboard();
+    await loadDashboard(false);
     showToast('Dashboard Refreshed', 'Latest stats and overview metrics updated.', 'success');
   };
 
@@ -275,7 +290,7 @@ export const DashboardPage: React.FC = () => {
                 <p className="dashed-desc">Create your first campaign to start sending.</p>
               </div>
             ) : (
-              recentCampaigns.map((c) => {
+              recentCampaigns.map((c, i) => {
                 const statusColors: Record<string, string> = {
                   draft: '#71717a',
                   scheduled: '#f59e0b',
@@ -285,7 +300,7 @@ export const DashboardPage: React.FC = () => {
                 };
                 const color = statusColors[c.status] || '#71717a';
                 return (
-                  <div key={c._id} className="dash-camp-row">
+                  <div key={c._id ? `${c._id}-${i}` : `camp-${i}`} className="dash-camp-row">
                     <div className="dash-camp-icon" style={{ background: `${color}20` }}>
                       <Send style={{ color, width: 14, height: 14 }} />
                     </div>
@@ -334,7 +349,7 @@ export const DashboardPage: React.FC = () => {
                 const colors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b'];
                 const col = colors[i % colors.length];
                 return (
-                  <div key={seg._id} style={{ marginBottom: 12 }}>
+                  <div key={seg._id ? `${seg._id}-${i}` : `seg-${i}`} style={{ marginBottom: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
                       <span style={{ fontSize: 12, fontWeight: 600 }}>{seg.name}</span>
                       <span style={{ fontSize: 12, fontWeight: 700, color: col }}>{count}</span>
@@ -378,7 +393,7 @@ export const DashboardPage: React.FC = () => {
                 No recent customers found.
               </div>
             ) : (
-              recentCustomers.map((c) => {
+              recentCustomers.map((c, i) => {
                 const initials = (c.name || 'U')
                   .split(' ')
                   .map((n: string) => n[0])
@@ -393,7 +408,7 @@ export const DashboardPage: React.FC = () => {
                   : '20 Jul';
                 return (
                   <div
-                    key={c._id}
+                    key={c._id ? `${c._id}-${i}` : `cust-${i}`}
                     className="dash-cust-row"
                     style={{
                       display: 'flex',

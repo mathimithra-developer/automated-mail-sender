@@ -4,15 +4,11 @@ import { GitMerge } from 'lucide-react';
 
 interface ConditionalBlockProps {
   block: ConditionalBlockData;
-  isSelected: boolean;
-  onSelect: () => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
-export const ConditionalBlock: React.FC<ConditionalBlockProps> = ({
-  block,
-  isSelected,
-  onSelect,
-}) => {
+export const ConditionalBlock: React.FC<ConditionalBlockProps> = ({ block }) => {
   const {
     condition = "user.plan === 'pro'",
     ifTrueContent = '🎉 Special Pro Member Offer: Get 50% Off Lifetime Upgrades!',
@@ -21,23 +17,13 @@ export const ConditionalBlock: React.FC<ConditionalBlockProps> = ({
 
   return (
     <div
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
-      className={`builder-block-wrapper ${isSelected ? 'selected' : ''}`}
       style={{
-        position: 'relative',
         padding: '16px',
-        margin: '4px 0',
         borderRadius: '8px',
-        cursor: 'pointer',
-        border: isSelected ? '2px solid #8b5cf6' : '1px dashed #8b5cf6',
+        border: '1px dashed #8b5cf6',
         background: 'rgba(139, 92, 246, 0.03)',
-        boxShadow: isSelected
-          ? '0 0 0 3px rgba(139, 92, 246, 0.15)'
-          : 'none',
-        transition: 'all 0.15s',
+        width: '100%',
+        boxSizing: 'border-box',
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -96,27 +82,6 @@ export const ConditionalBlock: React.FC<ConditionalBlockProps> = ({
           </div>
         </div>
       </div>
-
-      {isSelected && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -10,
-            right: 12,
-            background: '#8b5cf6',
-            color: '#ffffff',
-            fontSize: '10px',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '4px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            pointerEvents: 'none',
-          }}
-        >
-          Conditional logic
-        </div>
-      )}
     </div>
   );
 };

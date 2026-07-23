@@ -4,15 +4,11 @@ import { Copy, Check } from 'lucide-react';
 
 interface CouponBlockProps {
   block: CouponBlockData;
-  isSelected: boolean;
-  onSelect: () => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
-export const CouponBlock: React.FC<CouponBlockProps> = ({
-  block,
-  isSelected,
-  onSelect,
-}) => {
+export const CouponBlock: React.FC<CouponBlockProps> = ({ block }) => {
   const {
     headline = 'SPECIAL PROMO DISCOUNT',
     headlineColor = '#1e293b',
@@ -36,22 +32,15 @@ export const CouponBlock: React.FC<CouponBlockProps> = ({
 
   return (
     <div
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
-      className={`builder-block-wrapper ${isSelected ? 'selected' : ''}`}
       style={{
-        position: 'relative',
         padding: '20px',
         margin: '4px 0',
         borderRadius: '8px',
-        cursor: 'pointer',
         background: backgroundColor,
         border: `2px dashed ${borderColor}`,
         textAlign: 'center',
-        boxShadow: isSelected ? '0 0 0 3px rgba(59, 130, 246, 0.15)' : 'none',
-        transition: 'all 0.15s',
+        boxSizing: 'border-box',
+        width: '100%',
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
@@ -102,27 +91,6 @@ export const CouponBlock: React.FC<CouponBlockProps> = ({
           </p>
         )}
       </div>
-
-      {isSelected && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -10,
-            right: 12,
-            background: '#3b82f6',
-            color: '#ffffff',
-            fontSize: '10px',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '4px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            pointerEvents: 'none',
-          }}
-        >
-          Coupon ({code})
-        </div>
-      )}
     </div>
   );
 };

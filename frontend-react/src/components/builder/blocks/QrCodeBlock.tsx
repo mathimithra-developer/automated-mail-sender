@@ -3,15 +3,11 @@ import { QrCodeBlockData } from '../types';
 
 interface QrCodeBlockProps {
   block: QrCodeBlockData;
-  isSelected: boolean;
-  onSelect: () => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
-export const QrCodeBlock: React.FC<QrCodeBlockProps> = ({
-  block,
-  isSelected,
-  onSelect,
-}) => {
+export const QrCodeBlock: React.FC<QrCodeBlockProps> = ({ block }) => {
   const {
     url = 'https://example.com',
     size = 140,
@@ -24,35 +20,22 @@ export const QrCodeBlock: React.FC<QrCodeBlockProps> = ({
   )}`;
 
   return (
-    <div
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
-      className={`builder-block-wrapper ${isSelected ? 'selected' : ''}`}
-      style={{
-        position: 'relative',
-        padding: '12px 16px',
-        margin: '4px 0',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        border: isSelected ? '2px solid #3b82f6' : '1px dashed transparent',
-        boxShadow: isSelected ? '0 0 0 3px rgba(59, 130, 246, 0.15)' : 'none',
-        transition: 'border-color 0.15s, box-shadow 0.15s',
-      }}
-    >
+    <div style={{ padding: '4px 0', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ textAlign: align }}>
-        <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 6, maxWidth: '100%' }}>
           <img
             src={qrImageUrl}
             alt={caption || 'QR Code'}
             style={{
               width: size,
-              height: size,
+              height: 'auto',
+              maxWidth: '100%',
               borderRadius: 6,
               border: '1px solid #e2e8f0',
               padding: 4,
               background: '#ffffff',
+              display: 'block',
+              boxSizing: 'border-box',
             }}
           />
           {caption && (
@@ -62,27 +45,6 @@ export const QrCodeBlock: React.FC<QrCodeBlockProps> = ({
           )}
         </div>
       </div>
-
-      {isSelected && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -10,
-            right: 12,
-            background: '#3b82f6',
-            color: '#ffffff',
-            fontSize: '10px',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '4px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            pointerEvents: 'none',
-          }}
-        >
-          QR Code
-        </div>
-      )}
     </div>
   );
 };

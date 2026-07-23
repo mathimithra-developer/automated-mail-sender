@@ -1,18 +1,13 @@
 import React from 'react';
 import { SocialBlockData } from '../types';
-import { Share2 } from 'lucide-react';
 
 interface SocialBlockProps {
   block: SocialBlockData;
-  isSelected: boolean;
-  onSelect: () => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
-export const SocialBlock: React.FC<SocialBlockProps> = ({
-  block,
-  isSelected,
-  onSelect,
-}) => {
+export const SocialBlock: React.FC<SocialBlockProps> = ({ block }) => {
   const {
     iconSize = 24,
     align = 'center',
@@ -59,48 +54,22 @@ export const SocialBlock: React.FC<SocialBlockProps> = ({
             <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
           </svg>
         );
-      case 'whatsapp':
-        return (
-          <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm5.82 14.12c-.24.68-1.2 1.25-1.95 1.41-.51.11-1.18.2-3.43-.73-2.87-1.18-4.73-4.11-4.87-4.3-.14-.19-1.17-1.56-1.17-2.98 0-1.42.74-2.12 1.01-2.41.27-.29.59-.36.79-.36.2 0 .39.01.56.01.18 0 .42-.07.66.5.24.58.82 2 .89 2.15.07.15.12.33.02.53-.1.19-.15.31-.3.49-.15.18-.31.4-.44.54-.15.15-.3.31-.13.6.17.29.77 1.27 1.65 2.06 1.13 1.01 2.09 1.32 2.39 1.47.29.15.46.13.63-.07.17-.2.74-.86.94-1.16.2-.29.39-.24.66-.14.27.1 1.72.81 2.02.96.3.15.5.22.57.34.07.12.07.7-.17 1.38z" />
-          </svg>
-        );
-      case 'telegram':
-        return (
-          <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M9.78 18.65l.28-4.21 7.68-6.92c.34-.31-.07-.46-.52-.18L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z" />
-          </svg>
-        );
       default:
-        return <Share2 size={iconSize} />;
+        return null;
     }
   };
 
+  const justifyContent =
+    align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
+
   return (
-    <div
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
-      className={`builder-block-wrapper ${isSelected ? 'selected' : ''}`}
-      style={{
-        position: 'relative',
-        padding: '12px 16px',
-        margin: '4px 0',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        border: isSelected ? '2px solid #3b82f6' : '1px dashed transparent',
-        boxShadow: isSelected ? '0 0 0 3px rgba(59, 130, 246, 0.15)' : 'none',
-        transition: 'border-color 0.15s, box-shadow 0.15s',
-      }}
-    >
+    <div style={{ padding: '4px 0', width: '100%', boxSizing: 'border-box' }}>
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent:
-            align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center',
-          gap: 14,
+          justifyContent: justifyContent,
+          gap: 12,
           flexWrap: 'wrap',
         }}
       >
@@ -115,7 +84,7 @@ export const SocialBlock: React.FC<SocialBlockProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               textDecoration: 'none',
-              transition: 'transform 0.15s',
+              transition: 'opacity 0.15s',
               pointerEvents: 'none',
             }}
           >
@@ -123,27 +92,6 @@ export const SocialBlock: React.FC<SocialBlockProps> = ({
           </a>
         ))}
       </div>
-
-      {isSelected && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -10,
-            right: 12,
-            background: '#3b82f6',
-            color: '#ffffff',
-            fontSize: '10px',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '4px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            pointerEvents: 'none',
-          }}
-        >
-          Social ({links.length})
-        </div>
-      )}
     </div>
   );
 };

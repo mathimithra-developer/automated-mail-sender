@@ -452,7 +452,7 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
             flexShrink: 0,
           }}
         >
-          <div style={{ padding: 16, flex: 1, overflowY: 'auto' }}>
+          <div className="builder-sidebar-scroll" style={{ padding: '16px 16px 40px 16px', flex: 1, overflowY: 'auto' }}>
             {/* LAYOUT SECTIONS */}
             <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#2563eb', margin: '0 0 10px 0' }}>
               Layout Structure
@@ -500,9 +500,9 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
                 { type: 'social', label: 'Social Icons', icon: <Share2 size={15} /> },
                 { type: 'html', label: 'Custom HTML', icon: <Code2 size={15} /> },
                 { type: 'menu', label: 'Nav Menu', icon: <Menu size={15} /> },
-              ].map((item) => (
+              ].map((item, idx) => (
                 <button
-                  key={item.type}
+                  key={`basic-${item.type}-${idx}`}
                   type="button"
                   onClick={() => {
                     if (present.sections.length === 0) {
@@ -542,9 +542,9 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
                 { type: 'qrCode', label: 'QR Code', icon: <QrCode size={15} /> },
                 { type: 'poll', label: 'Poll', icon: <BarChart2 size={15} /> },
                 { type: 'conditional', label: 'Conditional', icon: <GitMerge size={15} /> },
-              ].map((item) => (
+              ].map((item, idx) => (
                 <button
-                  key={item.type}
+                  key={`adv-${item.type}-${idx}`}
                   type="button"
                   onClick={() => {
                     if (present.sections.length === 0) {
@@ -572,27 +572,31 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
 
         {/* ── Central Email Canvas ───────────────────────────────────── */}
         <div
+          className="builder-canvas-scroll"
           style={{
             flex: 1,
             background: present.globalTheme.backgroundColor || '#f4f4f5',
-            overflowY: 'auto',
-            padding: 32,
+            overflow: 'hidden',
+            padding: '32px 32px 32px 32px',
             display: 'flex',
             justifyContent: 'center',
+            alignItems: 'flex-start',
           }}
           onClick={() => dispatch({ type: 'SELECT_ITEM', selection: null })}
         >
           <div
+            className="builder-center-card"
             style={{
               width: '100%',
               maxWidth: previewMode === 'mobile' ? 375 : 640,
+              maxHeight: 'calc(100vh - 200px)',
+              overflowY: 'auto',
               background: '#ffffff',
               borderRadius: 10,
               boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05)',
               minHeight: 500,
               transition: 'max-width 0.2s ease-in-out',
               boxSizing: 'border-box',
-              overflow: 'hidden',
             }}
           >
             {present.sections.length === 0 ? (
@@ -607,9 +611,9 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
                 Canvas is empty. Click <strong>1 Column</strong> or a component from the left sidebar to start building.
               </div>
             ) : (
-              present.sections.map((sec) => (
+              present.sections.map((sec, idx) => (
                 <Section
-                  key={sec.id}
+                  key={sec.id ? `${sec.id}-${idx}` : `sec-${idx}`}
                   section={sec}
                   selectedId={selectedId}
                   onSelectSection={() => dispatch({ type: 'SELECT_ITEM', selection: { type: 'section', id: sec.id } })}
@@ -729,7 +733,7 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
           </div>
 
           {/* Right Tab Content Body */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="builder-properties-scroll" style={{ flex: 1, overflowY: 'auto' }}>
             {activeRightTab === 'properties' && (
               <>
                 {selectedBlock ? (

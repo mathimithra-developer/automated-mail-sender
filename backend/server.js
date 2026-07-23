@@ -24,6 +24,7 @@ import assetRoutes        from "./routes/assets.js";
 import abTestRoutes       from "./routes/abtest.js";
 import collaborationRoutes from "./routes/collaboration.js";
 import customFieldRoutes   from "./routes/customfields.js";
+import whatsappRoutes      from "./routes/whatsapp.js";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -220,23 +221,32 @@ app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
     const { Campaign, Customer, EmailTemplate, Segment, SendLog, ABTest } = await import('./lib/models.js');
     const orgId = req.session?.orgId;
 
-    const [customers, campaigns, templates, segments, abtests,
-           activeCustomers, unsubscribed, sendLogs] = await Promise.all([
+    const [
+      customers,
+      campaigns,
+      templates,
+      segments,
+      abtests,
+      activeCustomers,
+      unsubscribed,
+      totalSent,
+      totalOpened,
+      totalClicked
+    ] = await Promise.all([
       Customer.countDocuments({ belongsTo: orgId }),
       Campaign.countDocuments({ organization: orgId }),
       EmailTemplate.countDocuments({ organization: orgId }),
       Segment.countDocuments({ organization: orgId }),
       ABTest.countDocuments({ organization: orgId }),
-      Customer.countDocuments({ belongsTo: orgId, emailStatus: 'active' }),
+      Customer.countDocuments({ belongsTo: orgId, emailStatus: { $ne: 'unsubscribed' } }),
       Customer.countDocuments({ belongsTo: orgId, emailStatus: 'unsubscribed' }),
-      SendLog.find({ organization: orgId }).sort({ sentAt: -1 }).limit(500).lean(),
+      SendLog.countDocuments({ organization: orgId }),
+      SendLog.countDocuments({ organization: orgId, openedAt: { $ne: null } }),
+      SendLog.countDocuments({ organization: orgId, clickedAt: { $ne: null } }),
     ]);
 
-    const totalSent    = sendLogs.length;
-    const totalOpened  = sendLogs.filter(l => l.openedAt).length;
-    const totalClicked = sendLogs.filter(l => l.clickedAt).length;
-    const openRate     = totalSent ? Math.round((totalOpened  / totalSent) * 100) : 0;
-    const clickRate    = totalSent ? Math.round((totalClicked / totalSent) * 100) : 0;
+    const openRate  = totalSent ? Math.round((totalOpened  / totalSent) * 100) : 0;
+    const clickRate = totalSent ? Math.round((totalClicked / totalSent) * 100) : 0;
 
     // Recent campaigns with stats
     const recentCampaigns = await Campaign.find({ organization: orgId })
@@ -254,8 +264,20 @@ app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
 
     res.json({
       success: true,
-      stats: { customers, campaigns, templates, segments, abtests,
-               activeCustomers, unsubscribed, totalSent, openRate, clickRate },
+      stats: {
+        customers,
+        campaigns,
+        templates,
+        segments,
+        abtests,
+        activeCustomers,
+        unsubscribed,
+        totalSent,
+        totalOpened,
+        totalClicked,
+        openRate,
+        clickRate
+      },
       recentCampaigns,
       topSegments,
       recentCustomers,
@@ -276,6 +298,7 @@ app.use("/api/ai",         requireAuth, aiRoutes);
 app.use("/api/assets",     requireAuth, assetRoutes);
 app.use("/api/abtests",    requireAuth, abTestRoutes);
 app.use("/api/customfields", requireAuth, customFieldRoutes);
+app.use("/api/whatsapp",     requireAuth, whatsappRoutes);
 // Collaboration — nested under templates
 app.use("/api/templates",  requireAuth, collaborationRoutes);
 // Public webhook (no auth)

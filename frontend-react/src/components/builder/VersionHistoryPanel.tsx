@@ -130,9 +130,9 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
             No saved versions found for this template.
           </div>
         ) : (
-          versions.map((ver) => (
+          versions.map((ver, idx) => (
             <div
-              key={ver._id}
+              key={ver._id ? `${ver._id}-${idx}` : `ver-${idx}`}
               style={{
                 background: '#f8fafc',
                 border: '1px solid #e2e8f0',

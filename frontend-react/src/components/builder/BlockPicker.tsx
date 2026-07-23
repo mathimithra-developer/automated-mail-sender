@@ -158,7 +158,7 @@ export const BlockPicker: React.FC<BlockPickerProps> = ({
         </div>
 
         {/* Body Items list */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+        <div className="builder-block-picker-scroll" style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8', fontSize: 13 }}>
               No block type matching "{search}"
@@ -171,9 +171,9 @@ export const BlockPicker: React.FC<BlockPickerProps> = ({
                     Content Elements
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    {contentItems.map((item) => (
+                    {contentItems.map((item, idx) => (
                       <button
-                        key={item.type}
+                        key={`content-${item.type}-${idx}`}
                         type="button"
                         onClick={() => {
                           onSelectBlock(item.type);
@@ -210,9 +210,9 @@ export const BlockPicker: React.FC<BlockPickerProps> = ({
                     Advanced & Commerce
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    {advancedItems.map((item) => (
+                    {advancedItems.map((item, idx) => (
                       <button
-                        key={item.type}
+                        key={`adv-${item.type}-${idx}`}
                         type="button"
                         onClick={() => {
                           onSelectBlock(item.type);

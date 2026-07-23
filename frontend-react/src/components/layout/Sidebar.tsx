@@ -36,79 +36,81 @@ export const Sidebar: React.FC = () => {
       </div>
 
       <nav className="sidebar-nav">
-        <div className="nav-section-label">Overview</div>
-        <NavLink
-          to="/dashboard"
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-          id="nav-dashboard"
-        >
-          <LayoutDashboard />
-          Dashboard
-        </NavLink>
+        <div className="nav-section">
+          <div className="nav-section-label">Main</div>
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            id="nav-dashboard"
+          >
+            <LayoutDashboard />
+            Dashboard
+          </NavLink>
+          <NavLink
+            to="/customers"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            id="nav-customers"
+          >
+            <Users />
+            Customers
+          </NavLink>
+          <NavLink
+            to="/segments"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            id="nav-segments"
+          >
+            <Layers />
+            Segments
+          </NavLink>
+        </div>
 
-        <div className="nav-section-label">Audience</div>
-        <NavLink
-          to="/customers"
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-          id="nav-customers"
-        >
-          <Users />
-          Customers
-        </NavLink>
-        <NavLink
-          to="/segments"
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-          id="nav-segments"
-        >
-          <Layers />
-          Segments
-        </NavLink>
+        <div className="nav-section">
+          <div className="nav-section-label">Email Studio</div>
+          <NavLink
+            to="/templates"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            id="nav-templates"
+          >
+            <Mail />
+            Mail Builder
+          </NavLink>
+          <NavLink
+            to="/campaigns"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            id="nav-campaigns"
+          >
+            <Send />
+            Campaigns
+          </NavLink>
+          <NavLink
+            to="/abtests"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            id="nav-abtests"
+          >
+            <GitBranch />
+            A/B Tests
+          </NavLink>
+        </div>
 
-        <div className="nav-section-label">Email</div>
-        <NavLink
-          to="/templates"
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-          id="nav-templates"
-        >
-          <Mail />
-          Mail Builder
-        </NavLink>
-        <NavLink
-          to="/campaigns"
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-          id="nav-campaigns"
-        >
-          <Send />
-          Campaigns
-        </NavLink>
-        <NavLink
-          to="/abtests"
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-          id="nav-abtests"
-        >
-          <GitBranch />
-          A/B Tests
-        </NavLink>
-
-        <div className="nav-section-label">Media</div>
-        <NavLink
-          to="/assets"
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-          id="nav-assets"
-        >
-          <ImageIcon />
-          Assets
-        </NavLink>
-
-        <div className="nav-section-label">Account</div>
-        <NavLink
-          to="/settings"
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-          id="nav-settings"
-        >
-          <Settings />
-          Settings
-        </NavLink>
+        <div className="nav-section">
+          <div className="nav-section-label">System</div>
+          <NavLink
+            to="/assets"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            id="nav-assets"
+          >
+            <ImageIcon />
+            Assets
+          </NavLink>
+          <NavLink
+            to="/settings"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            id="nav-settings"
+          >
+            <Settings />
+            Settings
+          </NavLink>
+        </div>
       </nav>
 
       <div className="sidebar-footer">

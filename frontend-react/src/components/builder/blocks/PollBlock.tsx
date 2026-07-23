@@ -3,15 +3,11 @@ import { PollBlockData } from '../types';
 
 interface PollBlockProps {
   block: PollBlockData;
-  isSelected: boolean;
-  onSelect: () => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
-export const PollBlock: React.FC<PollBlockProps> = ({
-  block,
-  isSelected,
-  onSelect,
-}) => {
+export const PollBlock: React.FC<PollBlockProps> = ({ block }) => {
   const {
     question = 'How satisfied are you with our service?',
     align = 'center',
@@ -25,23 +21,14 @@ export const PollBlock: React.FC<PollBlockProps> = ({
 
   return (
     <div
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
-      className={`builder-block-wrapper ${isSelected ? 'selected' : ''}`}
       style={{
-        position: 'relative',
         padding: '16px',
-        margin: '4px 0',
         borderRadius: '8px',
-        cursor: 'pointer',
-        border: isSelected ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+        border: '1px solid #e2e8f0',
         background: '#ffffff',
-        boxShadow: isSelected
-          ? '0 0 0 3px rgba(59, 130, 246, 0.15)'
-          : '0 2px 8px rgba(0,0,0,0.03)',
-        transition: 'all 0.15s',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+        width: '100%',
+        boxSizing: 'border-box',
       }}
     >
       <div style={{ textAlign: align }}>
@@ -79,27 +66,6 @@ export const PollBlock: React.FC<PollBlockProps> = ({
           ))}
         </div>
       </div>
-
-      {isSelected && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -10,
-            right: 12,
-            background: '#3b82f6',
-            color: '#ffffff',
-            fontSize: '10px',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '4px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            pointerEvents: 'none',
-          }}
-        >
-          Poll ({options.length} choices)
-        </div>
-      )}
     </div>
   );
 };

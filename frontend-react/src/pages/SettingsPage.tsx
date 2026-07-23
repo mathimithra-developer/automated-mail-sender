@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Plus, Save, Trash2, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, Save, Trash2, X, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CustomField, OrgSettings } from '../types';
 import { api } from '../services/api';
 import { useToast } from '../context/ToastContext';
@@ -10,6 +10,10 @@ export const SettingsPage: React.FC = () => {
 
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Pagination for Custom Fields
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   const [provider, setProvider] = useState('ses');
   const [senderName, setSenderName] = useState('Acme Corp');
@@ -31,15 +35,39 @@ export const SettingsPage: React.FC = () => {
   const [fieldKey, setFieldKey] = useState('');
   const [fieldType, setFieldType] = useState('text');
   const [fieldHint, setFieldHint] = useState('');
+  const [autoCreateSegment, setAutoCreateSegment] = useState(false);
+
+  const totalFields = customFields.length;
+  const totalPages = Math.ceil(totalFields / pageSize) || 1;
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const startIndex = (safePage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalFields);
+  const paginatedFields = customFields.slice(startIndex, endIndex);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [cfRes, setRes] = await Promise.all([
+      const [cfRes, setRes, segRes] = await Promise.all([
         api.get('/api/customfields').catch(() => ({ data: [] })),
         api.get('/api/settings').catch(() => ({ data: null })),
+        api.get('/api/segments').catch(() => ({ data: [] })),
       ]);
-      setCustomFields(cfRes.data || []);
+
+      const segments = segRes.data || [];
+      const fieldsWithLink = (cfRes.data || []).map((cf: any) => {
+        const fieldKey = cf.name || cf.key || cf.label?.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        const linkedSeg = cf.linkedSegment || segments.find((s: any) =>
+          s.name === `${cf.label} Segment` ||
+          s.conditions?.some((c: any) => c.attrKey === fieldKey || c.field === fieldKey)
+        );
+        return {
+          ...cf,
+          linkedSegment: linkedSeg ? { id: linkedSeg._id || linkedSeg.id, name: linkedSeg.name } : null,
+        };
+      });
+
+      setCustomFields(fieldsWithLink);
+
       if (setRes.data) {
         const s = setRes.data;
         setProvider(s.provider || 'ses');
@@ -100,17 +128,29 @@ export const SettingsPage: React.FC = () => {
     e.preventDefault();
     if (!fieldLabel || !fieldKey) return;
     try {
-      await api.post('/api/customfields', {
+      const res = await api.post('/api/customfields', {
         label: fieldLabel,
-        key: fieldKey,
-        type: fieldType,
+        name: fieldKey,
+        dataType: fieldType,
         hint: fieldHint,
+        autoCreateSegment,
       });
-      showToast('Created', 'Custom field added successfully', 'success');
+      if (res.linkedSegment) {
+        showToast(
+          'Custom Field & Segment Created',
+          `Field "${fieldLabel}" and linked segment "${res.linkedSegment.name}" created successfully.`,
+          'success'
+        );
+      } else {
+        showToast('Created', 'Custom field added successfully', 'success');
+      }
+      window.dispatchEvent(new CustomEvent('segments-updated'));
       setShowModal(false);
       setFieldLabel('');
       setFieldKey('');
       setFieldHint('');
+      setAutoCreateSegment(false);
+      setPage(1);
       loadData();
     } catch (err: any) {
       showToast('Error creating custom field', err.message, 'error');
@@ -122,6 +162,9 @@ export const SettingsPage: React.FC = () => {
     try {
       await api.delete(`/api/customfields/${deleteConfirmId}`);
       showToast('Deleted', 'Custom field removed', 'success');
+      if (paginatedFields.length === 1 && safePage > 1) {
+        setPage(safePage - 1);
+      }
       loadData();
     } catch (err: any) {
       showToast('Error deleting field', err.message, 'error');
@@ -177,92 +220,46 @@ export const SettingsPage: React.FC = () => {
                     Loading custom fields…
                   </td>
                 </tr>
-              ) : customFields.length === 0 ? (
-                <>
-                  <tr>
-                    <td>
-                      <strong>City</strong>
-                    </td>
-                    <td>
-                      <code>city</code>
-                    </td>
-                    <td>
-                      <span className="cf-type">string</span>
-                    </td>
-                    <td style={{ color: 'var(--text-muted)' }}>Customer primary city</td>
-                    <td>No</td>
-                    <td>—</td>
-                    <td>
-                      <span className="attr-badge">Active</span>
-                    </td>
-                    <td style={{ textAlign: 'right', paddingRight: 20 }}>
-                      <button className="action-icon-btn btn-delete" title="Delete Field">
-                        <Trash2 style={{ width: 13, height: 13 }} />
-                      </button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <strong>Plan</strong>
-                    </td>
-                    <td>
-                      <code>plan</code>
-                    </td>
-                    <td>
-                      <span className="cf-type">string</span>
-                    </td>
-                    <td style={{ color: 'var(--text-muted)' }}>Subscription tier</td>
-                    <td>No</td>
-                    <td>pro</td>
-                    <td>
-                      <span className="attr-badge">Active</span>
-                    </td>
-                    <td style={{ textAlign: 'right', paddingRight: 20 }}>
-                      <button className="action-icon-btn btn-delete" title="Delete Field">
-                        <Trash2 style={{ width: 13, height: 13 }} />
-                      </button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <strong>Lead Score</strong>
-                    </td>
-                    <td>
-                      <code>lead_score</code>
-                    </td>
-                    <td>
-                      <span className="cf-type">number</span>
-                    </td>
-                    <td style={{ color: 'var(--text-muted)' }}>Calculated lead score</td>
-                    <td>No</td>
-                    <td>0</td>
-                    <td>
-                      <span className="attr-badge">Active</span>
-                    </td>
-                    <td style={{ textAlign: 'right', paddingRight: 20 }}>
-                      <button className="action-icon-btn btn-delete" title="Delete Field">
-                        <Trash2 style={{ width: 13, height: 13 }} />
-                      </button>
-                    </td>
-                  </tr>
-                </>
+              ) : paginatedFields.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>
+                    No custom fields configured yet. Click "Add Custom Field" to create one.
+                  </td>
+                </tr>
               ) : (
-                customFields.map((cf: any) => (
-                  <tr key={cf._id}>
+                paginatedFields.map((cf: any, idx: number) => (
+                  <tr key={cf._id ? `${cf._id}-${idx}` : (cf.name ? `${cf.name}-${idx}` : `cf-${idx}`)}>
                     <td>
                       <strong>{cf.label || cf.name || cf.key}</strong>
                     </td>
                     <td>
-                      <code>{cf.key}</code>
+                      <code>{cf.name || cf.key}</code>
                     </td>
                     <td>
-                      <span className="cf-type">{cf.type || 'text'}</span>
+                      <span className="cf-type">{cf.dataType || cf.type || 'text'}</span>
                     </td>
                     <td style={{ color: 'var(--text-muted)' }}>{cf.hint || '—'}</td>
-                    <td>No</td>
-                    <td>—</td>
+                    <td>{cf.isMandatory ? 'Yes' : 'No'}</td>
+                    <td>{cf.defaultValue != null ? String(cf.defaultValue) : '—'}</td>
                     <td>
-                      <span className="attr-badge">Active</span>
+                      {cf.linkedSegment ? (
+                        <span
+                          className="attr-badge"
+                          style={{
+                            background: 'rgba(34, 197, 94, 0.1)',
+                            color: '#16a34a',
+                            border: '1px solid rgba(34, 197, 94, 0.2)',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Active ({cf.linkedSegment.name})
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>None</span>
+                      )}
                     </td>
                     <td style={{ textAlign: 'right', paddingRight: 20 }}>
                       <button
@@ -279,6 +276,63 @@ export const SettingsPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Custom Fields Pagination Footer */}
+        {totalFields > 0 && (
+          <div className="table-pagination" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+            <div className="pagination-left" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span>
+                Showing {startIndex + 1}–{endIndex} of {totalFields} fields
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="property-select"
+                  style={{ padding: '2px 6px', fontSize: 12, height: 'auto', width: 'auto' }}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                </select>
+              </div>
+            </div>
+            <div className="pagination-right">
+              <button
+                className="pag-nav-btn"
+                disabled={safePage <= 1}
+                onClick={() => setPage(safePage - 1)}
+                title="Previous Page"
+              >
+                <ChevronLeft style={{ width: 14, height: 14 }} />
+              </button>
+              <input
+                type="number"
+                className="pag-input"
+                value={safePage}
+                min={1}
+                max={totalPages}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val >= 1 && val <= totalPages) setPage(val);
+                }}
+              />
+              <span className="pag-total">/ {totalPages}</span>
+              <button
+                className="pag-nav-btn"
+                disabled={safePage >= totalPages}
+                onClick={() => setPage(safePage + 1)}
+                title="Next Page"
+              >
+                <ChevronRight style={{ width: 14, height: 14 }} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid-3-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
@@ -570,6 +624,19 @@ export const SettingsPage: React.FC = () => {
                     value={fieldHint}
                     onChange={(e) => setFieldHint(e.target.value)}
                   />
+                </div>
+
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+                  <input
+                    type="checkbox"
+                    id="autoCreateSegment"
+                    checked={autoCreateSegment}
+                    onChange={(e) => setAutoCreateSegment(e.target.checked)}
+                    style={{ width: 16, height: 16, cursor: 'pointer' }}
+                  />
+                  <label htmlFor="autoCreateSegment" className="form-label" style={{ marginBottom: 0, cursor: 'pointer', userSelect: 'none' }}>
+                    Auto-create linked segment
+                  </label>
                 </div>
               </div>
               <div className="modal-footer">

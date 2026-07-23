@@ -3,15 +3,11 @@ import { MenuBlockData } from '../types';
 
 interface MenuBlockProps {
   block: MenuBlockData;
-  isSelected: boolean;
-  onSelect: () => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
-export const MenuBlock: React.FC<MenuBlockProps> = ({
-  block,
-  isSelected,
-  onSelect,
-}) => {
+export const MenuBlock: React.FC<MenuBlockProps> = ({ block }) => {
   const {
     align = 'center',
     color = '#2563eb',
@@ -26,23 +22,7 @@ export const MenuBlock: React.FC<MenuBlockProps> = ({
   } = block.content;
 
   return (
-    <div
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
-      className={`builder-block-wrapper ${isSelected ? 'selected' : ''}`}
-      style={{
-        position: 'relative',
-        padding: '12px 16px',
-        margin: '4px 0',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        border: isSelected ? '2px solid #3b82f6' : '1px dashed transparent',
-        boxShadow: isSelected ? '0 0 0 3px rgba(59, 130, 246, 0.15)' : 'none',
-        transition: 'border-color 0.15s, box-shadow 0.15s',
-      }}
-    >
+    <div style={{ padding: '4px 0', width: '100%', boxSizing: 'border-box' }}>
       <div
         style={{
           display: 'flex',
@@ -74,27 +54,6 @@ export const MenuBlock: React.FC<MenuBlockProps> = ({
           </React.Fragment>
         ))}
       </div>
-
-      {isSelected && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -10,
-            right: 12,
-            background: '#3b82f6',
-            color: '#ffffff',
-            fontSize: '10px',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '4px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            pointerEvents: 'none',
-          }}
-        >
-          Menu ({links.length})
-        </div>
-      )}
     </div>
   );
 };

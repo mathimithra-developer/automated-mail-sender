@@ -22,6 +22,8 @@ import { Segment } from '../types';
 import { api } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { SegmentMembersPanel } from '../components/segments/SegmentMembersPanel';
+import { SegmentPreviewModal } from '../components/segments/SegmentPreviewModal';
 
 interface Condition {
   field: string;
@@ -79,7 +81,11 @@ export const SegmentsPage: React.FC = () => {
   const [previewPage, setPreviewPage] = useState(1);
   const [showPreviewSection, setShowPreviewSection] = useState(false);
 
-  // Segment Details Modal
+  // Dedicated Enterprise View Panel & Full Preview Modal
+  const [selectedSegmentForPanel, setSelectedSegmentForPanel] = useState<Segment | null>(null);
+  const [showFullPreviewModal, setShowFullPreviewModal] = useState<boolean>(false);
+
+  // Legacy Details Modal State
   const [viewingSegment, setViewingSegment] = useState<any | null>(null);
   const [segmentCustomers, setSegmentCustomers] = useState<any[]>([]);
   const [segCustomersPage, setSegCustomersPage] = useState(1);
@@ -107,6 +113,11 @@ export const SegmentsPage: React.FC = () => {
 
   useEffect(() => {
     loadSegments();
+    const handleSegmentsUpdated = () => {
+      loadSegments();
+    };
+    window.addEventListener('segments-updated', handleSegmentsUpdated);
+    return () => window.removeEventListener('segments-updated', handleSegmentsUpdated);
   }, [page, search, statusFilter]);
 
   // Lock background body scroll when drawer is open
@@ -399,17 +410,8 @@ export const SegmentsPage: React.FC = () => {
     }
   };
 
-  const handleOpenDetailsModal = async (s: Segment) => {
-    setViewingSegment(s);
-    setSegCustomersLoading(true);
-    try {
-      const res = await api.get(`/api/segments/${s._id}/customers`);
-      setSegmentCustomers(res.data || []);
-    } catch (err: any) {
-      showToast('Error', err.message || 'Failed to load customers', 'error');
-    } finally {
-      setSegCustomersLoading(false);
-    }
+  const handleOpenDetailsModal = (s: Segment) => {
+    setSelectedSegmentForPanel(s);
   };
 
   const handleExportCSV = async (id: string) => {
@@ -748,7 +750,7 @@ export const SegmentsPage: React.FC = () => {
               <p className="dashed-title">No segments found</p>
             </div>
           ) : (
-            segments.map((s: any) => {
+            segments.map((s: any, idx: number) => {
               const lastSync = s.lastEvaluatedAt
                 ? new Date(s.lastEvaluatedAt).toLocaleString('en-IN', {
                     day: 'numeric',
@@ -760,7 +762,7 @@ export const SegmentsPage: React.FC = () => {
                 : '18 Jul 2026, 04:21 pm';
 
               return (
-                <div className="seg-card" key={s._id}>
+                <div className="seg-card" key={s._id ? `${s._id}-${idx}` : `seg-${idx}`}>
                   <div
                     style={{
                       display: 'flex',
@@ -885,8 +887,8 @@ export const SegmentsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {segments.map((s: any) => (
-                <tr key={s._id}>
+              {segments.map((s: any, idx: number) => (
+                <tr key={s._id ? `${s._id}-${idx}` : `seg-${idx}`}>
                   <td style={{ fontWeight: 600 }}>{s.name}</td>
                   <td style={{ color: 'var(--text-muted)' }}>{s.description || '—'}</td>
                   <td>
@@ -1067,7 +1069,7 @@ export const SegmentsPage: React.FC = () => {
                   {/* Conditions groups */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {groups.map((group, gIdx) => (
-                      <div key={group.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14, background: 'var(--bg-card)' }}>
+                      <div key={group.id ? `${group.id}-${gIdx}` : `grp-${gIdx}`} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14, background: 'var(--bg-card)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                           <span
                             style={{
@@ -1110,7 +1112,7 @@ export const SegmentsPage: React.FC = () => {
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                           {group.conditions.map((c, cIdx) => (
-                            <div key={cIdx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <div key={(c as any).id ? `${(c as any).id}-${cIdx}` : `cond-${cIdx}`} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                                 <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>FIELD</span>
                                 <select
@@ -1136,8 +1138,8 @@ export const SegmentsPage: React.FC = () => {
                                   value={c.operator}
                                   onChange={(e) => updateCondition(group.id, cIdx, 'operator', e.target.value)}
                                 >
-                                  {getOperatorsForField(c.field).map((op) => (
-                                    <option key={op.value} value={op.value}>
+                                  {getOperatorsForField(c.field).map((op, opIdx) => (
+                                    <option key={`${op.value}-${opIdx}`} value={op.value}>
                                       {op.label}
                                     </option>
                                   ))}
@@ -1192,63 +1194,97 @@ export const SegmentsPage: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Preview Customers section */}
+                {/* Preview Customers section with Threshold Logic */}
                 <div className="drawer-section" id="segPreviewCustomersSection">
-                  <h3 className="drawer-section-title">Matching Customers Preview</h3>
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 8 }}>
-                    <table className="data-table" style={{ minWidth: 'unset', width: '100%' }}>
-                      <thead>
-                        <tr>
-                          <th>Name</th>
-                          <th>Email</th>
-                          <th>Phone</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paginatedPreviewCustomers.length === 0 ? (
-                          <tr>
-                            <td colSpan={3} style={{ textAlign: 'center', padding: 12 }}>
-                              No matching customers
-                            </td>
-                          </tr>
-                        ) : (
-                          paginatedPreviewCustomers.map((pc, idx) => (
-                            <tr key={idx}>
-                              <td style={{ fontWeight: 600 }}>{pc.name || 'Unknown'}</td>
-                              <td style={{ fontSize: 11 }}>{pc.email || '—'}</td>
-                              <td style={{ fontSize: 11 }}>{pc.phoneNo || '—'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <h3 className="drawer-section-title" style={{ margin: 0 }}>Matching Customers Preview</h3>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)' }}>
+                      {typeof previewCount === 'number' ? `${previewCount.toLocaleString()} Total Matches` : previewCount}
+                    </span>
                   </div>
 
-                  {previewCustomers.length > previewLimit && (
-                    <div className="table-pagination" style={{ marginTop: 8 }}>
-                      <div className="pagination-left">Total: {previewCustomers.length}</div>
-                      <div className="pagination-right">
-                        <button
-                          type="button"
-                          className="pag-nav-btn"
-                          disabled={previewPage <= 1}
-                          onClick={() => setPreviewPage(previewPage - 1)}
-                        >
-                          <ChevronLeft style={{ width: 12, height: 12 }} />
-                        </button>
-                        <span style={{ fontSize: 12 }}>
-                          {previewPage} / {totalPreviewPages}
+                  {typeof previewCount === 'number' && previewCount >= 50 ? (
+                    /* Threshold >= 50: Enterprise Scalable High-Volume Card */
+                    <div className="preview-threshold-banner" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
+                      <div>
+                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--primary-dark)', display: 'block', marginBottom: 2 }}>
+                          HIGH VOLUME AUDIENCE MATCH
                         </span>
-                        <button
-                          type="button"
-                          className="pag-nav-btn"
-                          disabled={previewPage >= totalPreviewPages}
-                          onClick={() => setPreviewPage(previewPage + 1)}
-                        >
-                          <ChevronRight style={{ width: 12, height: 12 }} />
-                        </button>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>
+                          {previewCount.toLocaleString()} Customers Match Rules
+                        </div>
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+                          Matching customers exceed 50 records. Preview is optimized using server-side pagination to ensure fast load times and UI performance.
+                        </p>
                       </div>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ width: '100%', justifyContent: 'center' }}
+                        onClick={() => setShowFullPreviewModal(true)}
+                      >
+                        <Eye style={{ width: 14, height: 14 }} /> Open Full Paginated Preview
+                      </button>
                     </div>
+                  ) : (
+                    /* Threshold < 50: Inline Quick Preview Table */
+                    <>
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 8 }}>
+                        <table className="data-table" style={{ minWidth: 'unset', width: '100%' }}>
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Email</th>
+                              <th>Phone</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paginatedPreviewCustomers.length === 0 ? (
+                              <tr>
+                                <td colSpan={3} style={{ textAlign: 'center', padding: 12 }}>
+                                  No matching customers
+                                </td>
+                              </tr>
+                            ) : (
+                              paginatedPreviewCustomers.map((pc, idx) => (
+                                <tr key={pc._id ? `${pc._id}-${idx}` : `prev-${idx}`}>
+                                  <td style={{ fontWeight: 600 }}>{pc.name || 'Unknown'}</td>
+                                  <td style={{ fontSize: 11 }}>{pc.email || '—'}</td>
+                                  <td style={{ fontSize: 11 }}>{pc.phoneNo || '—'}</td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {previewCustomers.length > previewLimit && (
+                        <div className="table-pagination" style={{ marginTop: 8 }}>
+                          <div className="pagination-left">Total: {previewCustomers.length}</div>
+                          <div className="pagination-right">
+                            <button
+                              type="button"
+                              className="pag-nav-btn"
+                              disabled={previewPage <= 1}
+                              onClick={() => setPreviewPage(previewPage - 1)}
+                            >
+                              <ChevronLeft style={{ width: 12, height: 12 }} />
+                            </button>
+                            <span style={{ fontSize: 12 }}>
+                              {previewPage} / {totalPreviewPages}
+                            </span>
+                            <button
+                              type="button"
+                              className="pag-nav-btn"
+                              disabled={previewPage >= totalPreviewPages}
+                              onClick={() => setPreviewPage(previewPage + 1)}
+                            >
+                              <ChevronRight style={{ width: 12, height: 12 }} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -1266,136 +1302,29 @@ export const SegmentsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Segment Details Modal */}
-      {viewingSegment && (
-        <div className="modal-overlay">
-          <div className="modal-card" style={{ maxWidth: 640, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div className="modal-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-              <h2 className="modal-title" style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Segment: {viewingSegment.name}</h2>
-              <button className="modal-close" onClick={() => setViewingSegment(null)}>
-                <X style={{ width: 16, height: 16 }} />
-              </button>
-            </div>
-            <div className="modal-body" style={{ flex: 1, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {/* Stat Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: 10 }}>
-                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', padding: 12, borderRadius: 8, textAlign: 'center' }}>
-                  <span style={{ display: 'block', fontSize: 20, fontWeight: 800 }}>
-                    {segmentCustomers.length}
-                  </span>
-                  <span style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                    Matching Customers
-                  </span>
-                </div>
-                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', padding: 12, borderRadius: 8, textAlign: 'center' }}>
-                  <span style={{ display: 'block', fontSize: 20, fontWeight: 800 }}>
-                    {(viewingSegment.conditionGroups || []).reduce((acc: number, g: any) => acc + (g.conditions || []).length, 0) || (viewingSegment.conditions || []).length || 1}
-                  </span>
-                  <span style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                    Conditions
-                  </span>
-                </div>
-                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', padding: 12, borderRadius: 8 }}>
-                  <span style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', minHeight: 30 }}>
-                    {viewingSegment.description || 'No description provided.'}
-                  </span>
-                  <span style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                    Description
-                  </span>
-                </div>
-              </div>
+      {/* Dedicated Enterprise Slide-over Panel for Viewing Members */}
+      {selectedSegmentForPanel && (
+        <SegmentMembersPanel
+          segment={selectedSegmentForPanel}
+          onClose={() => setSelectedSegmentForPanel(null)}
+          showToast={showToast}
+        />
+      )}
 
-              {/* Filter Conditions */}
-              <div>
-                <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>
-                  Filter Conditions
-                </p>
-                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  <div style={{ background: '#ffffff', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
-                    G1 ({viewingSegment.groupsMatch || 'all'}): {viewingSegment.name?.toLowerCase().includes('phone') ? 'phoneNo contains 9' : 'emailStatus eq active'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Customers list table */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', margin: 0 }}>
-                    Matching Customers
-                  </p>
-                  <button className="btn btn-secondary btn-sm" onClick={() => handleExportCSV(viewingSegment._id)}>
-                    Export CSV
-                  </button>
-                </div>
-
-                <div style={{ overflow: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
-                  <table className="data-table" style={{ minWidth: 'unset', width: '100%' }}>
-                    <thead>
-                      <tr style={{ background: 'var(--bg-elevated)' }}>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {segCustomersLoading ? (
-                        <tr>
-                          <td colSpan={3} style={{ textAlign: 'center', padding: 20 }}>
-                            Loading…
-                          </td>
-                        </tr>
-                      ) : paginatedSegCustomers.length === 0 ? (
-                        <tr>
-                          <td colSpan={3} style={{ textAlign: 'center', padding: 20 }}>
-                            No matching customers found.
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedSegCustomers.map((sc, idx) => (
-                          <tr key={idx}>
-                            <td style={{ fontWeight: 600 }}>{sc.name}</td>
-                            <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{sc.email || '—'}</td>
-                            <td style={{ fontSize: 12 }}>{sc.phoneNo || '—'}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {segmentCustomers.length > segCustomersLimit && (
-                  <div className="table-pagination" style={{ marginTop: 8 }}>
-                    <div className="pagination-left">Total Records ({segmentCustomers.length})</div>
-                    <div className="pagination-right">
-                      <button
-                        className="pag-nav-btn"
-                        disabled={segCustomersPage <= 1}
-                        onClick={() => setSegCustomersPage(segCustomersPage - 1)}
-                      >
-                        <ChevronLeft style={{ width: 12, height: 12 }} />
-                      </button>
-                      <span style={{ fontSize: 12 }}>
-                        {segCustomersPage} / {totalSegCustomersPages}
-                      </span>
-                      <button
-                        className="pag-nav-btn"
-                        disabled={segCustomersPage >= totalSegCustomersPages}
-                        onClick={() => setSegCustomersPage(segCustomersPage + 1)}
-                      >
-                        <ChevronRight style={{ width: 12, height: 12 }} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="modal-footer" style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', background: 'var(--bg-card)', flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
-              <button className="btn" onClick={() => setViewingSegment(null)}>
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Dedicated Enterprise Segment Creation Full Preview Modal */}
+      {showFullPreviewModal && (
+        <SegmentPreviewModal
+          isOpen={true}
+          totalCount={typeof previewCount === 'number' ? previewCount : 0}
+          groups={groups}
+          groupsMatch={groupsMatch}
+          onClose={() => setShowFullPreviewModal(false)}
+          onSave={() => {
+            handleSaveSegment({ preventDefault: () => {} } as any);
+          }}
+          isEditing={Boolean(editingSegmentId)}
+          showToast={showToast}
+        />
       )}
 
       {/* Custom Professional Confirmation Modal */}

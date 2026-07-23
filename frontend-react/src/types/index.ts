@@ -154,3 +154,39 @@ export interface OrgSettings {
   apiKey?: string;
   provider?: string;
 }
+
+export interface WhatsAppTemplateComponent {
+  type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
+  format?: string;
+  text?: string;
+  buttons?: any[];
+}
+
+export interface WhatsAppTemplate {
+  _id?: string;
+  id?: string;
+  name: string;
+  category: string;
+  language?: string;
+  components: WhatsAppTemplateComponent[];
+}
+
+export interface WhatsAppCampaign {
+  _id: string;
+  name: string;
+  templateId: string;
+  status: string;
+  type?: 'whatsapp';
+  csvFileKey?: string;
+  nameColumn?: string;
+  phoneColumn?: string;
+  tags?: string[];
+  createdAt: string;
+  stats?: {
+    total: number;
+    sent: number;
+    delivered: number;
+    read?: number;
+    failed: number;
+  };
+}

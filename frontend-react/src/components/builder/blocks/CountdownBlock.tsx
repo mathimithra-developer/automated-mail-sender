@@ -3,15 +3,11 @@ import { CountdownBlockData } from '../types';
 
 interface CountdownBlockProps {
   block: CountdownBlockData;
-  isSelected: boolean;
-  onSelect: () => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
-export const CountdownBlock: React.FC<CountdownBlockProps> = ({
-  block,
-  isSelected,
-  onSelect,
-}) => {
+export const CountdownBlock: React.FC<CountdownBlockProps> = ({ block }) => {
   const {
     deadline = new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 16),
     label = 'Limited Time Offer Ends In:',
@@ -43,29 +39,20 @@ export const CountdownBlock: React.FC<CountdownBlockProps> = ({
     calculateTimeLeft();
     const intervalId = setInterval(calculateTimeLeft, 1000);
 
-    // Clean up interval on unmount to prevent memory leaks
     return () => clearInterval(intervalId);
   }, [deadline]);
 
   return (
     <div
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
-      className={`builder-block-wrapper ${isSelected ? 'selected' : ''}`}
       style={{
-        position: 'relative',
         padding: '20px',
         margin: '4px 0',
         borderRadius: '8px',
-        cursor: 'pointer',
         background: backgroundColor,
         color: '#ffffff',
         textAlign: 'center',
-        border: isSelected ? '2px solid #3b82f6' : '1px dashed transparent',
-        boxShadow: isSelected ? '0 0 0 3px rgba(59, 130, 246, 0.15)' : 'none',
-        transition: 'all 0.15s',
+        boxSizing: 'border-box',
+        width: '100%',
       }}
     >
       <p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: '#94a3b8' }}>
@@ -98,27 +85,6 @@ export const CountdownBlock: React.FC<CountdownBlockProps> = ({
           </div>
         ))}
       </div>
-
-      {isSelected && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -10,
-            right: 12,
-            background: '#3b82f6',
-            color: '#ffffff',
-            fontSize: '10px',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '4px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            pointerEvents: 'none',
-          }}
-        >
-          Countdown
-        </div>
-      )}
     </div>
   );
 };

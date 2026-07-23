@@ -58,23 +58,75 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/segments/preview & /api/segments/preview-count — count and get matching customers for unsaved segment settings
+// POST /api/segments/preview & /api/segments/preview-count — count and get matching customers for unsaved segment settings with server-side pagination
 router.post(['/preview', '/preview-count'], async (req, res) => {
   try {
     const orgId = req.session?.orgId;
-    const { conditions, conditionGroups, groupsMatch = 'all' } = req.body;
-    const query = buildQuery(orgId, conditions, conditionGroups, groupsMatch);
-    const customers = await Customer.find(query)
-      .select('name email phoneNo')
-      .limit(200)
-      .lean();
-    const count = await Customer.countDocuments(query);
-    res.json({ success: true, count, customers, data: customers });
+    const {
+      conditions,
+      conditionGroups,
+      groupsMatch = 'all',
+      page = 1,
+      limit = 25,
+      search = '',
+      status = ''
+    } = req.body;
+
+    const baseQuery = buildQuery(orgId, conditions, conditionGroups, groupsMatch);
+    
+    // Combine base segment conditions with search and status filters
+    const filter = { ...baseQuery };
+    if (search && search.trim()) {
+      const searchRegex = { $regex: search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+      filter.$and = [
+        ...(filter.$and || []),
+        {
+          $or: [
+            { name: searchRegex },
+            { email: searchRegex },
+            { phoneNo: searchRegex }
+          ]
+        }
+      ];
+    }
+    if (status) {
+      filter.emailStatus = status;
+    }
+
+    const numPage = Math.max(1, Number(page));
+    const numLimit = Math.max(1, Math.min(100, Number(limit)));
+    const skip = (numPage - 1) * numLimit;
+
+    const [customers, totalCount, activeCount] = await Promise.all([
+      Customer.find(filter)
+        .select('name email phoneNo emailStatus allowBroadcast attributes createdAt')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(numLimit)
+        .lean(),
+      Customer.countDocuments(filter),
+      Customer.countDocuments({ ...baseQuery, emailStatus: 'active' })
+    ]);
+
+    const pages = Math.ceil(totalCount / numLimit) || 1;
+
+    res.json({
+      success: true,
+      count: totalCount,
+      activeCount,
+      customers,
+      data: customers,
+      pagination: {
+        total: totalCount,
+        page: numPage,
+        limit: numLimit,
+        pages
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 router.get('/:id', async (req, res) => {
   try {
@@ -199,23 +251,123 @@ router.post('/:id/preview', async (req, res) => {
   }
 });
 
-// GET /api/segments/:id/customers — full list of matching customers
+// GET /api/segments/:id/customers — paginated list of matching segment customers
 router.get('/:id/customers', async (req, res) => {
+  try {
+    const orgId = req.session.orgId;
+    const {
+      page = 1,
+      limit = 25,
+      search = '',
+      status = '',
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    const segment = await Segment.findOne({ _id: req.params.id, organization: orgId });
+    if (!segment) return res.status(404).json({ error: 'Segment not found' });
+
+    const segOrgId = segment.organization?.toString() || orgId;
+    const baseQuery = buildQuery(segOrgId, segment.conditions, segment.conditionGroups, segment.groupsMatch || 'all');
+
+    const filter = { ...baseQuery };
+    if (search && search.trim()) {
+      const searchRegex = { $regex: search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+      filter.$and = [
+        ...(filter.$and || []),
+        {
+          $or: [
+            { name: searchRegex },
+            { email: searchRegex },
+            { phoneNo: searchRegex }
+          ]
+        }
+      ];
+    }
+    if (status) {
+      filter.emailStatus = status;
+    }
+
+    const numPage = Math.max(1, Number(page));
+    const numLimit = Math.max(1, Math.min(100, Number(limit)));
+    const skip = (numPage - 1) * numLimit;
+
+    const sortObj = {};
+    sortObj[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    const [customers, filteredCount, totalSegmentCount, activeCount] = await Promise.all([
+      Customer.find(filter)
+        .select('name email phoneNo emailStatus allowBroadcast attributes createdAt')
+        .sort(sortObj)
+        .skip(skip)
+        .limit(numLimit)
+        .lean(),
+      Customer.countDocuments(filter),
+      Customer.countDocuments(baseQuery),
+      Customer.countDocuments({ ...baseQuery, emailStatus: 'active' })
+    ]);
+
+    // Update segment cached count if total changed
+    if (segment.cachedCount !== totalSegmentCount) {
+      segment.cachedCount = totalSegmentCount;
+      segment.lastEvaluatedAt = new Date();
+      await segment.save();
+    }
+
+    const pages = Math.ceil(filteredCount / numLimit) || 1;
+
+    res.json({
+      success: true,
+      data: customers,
+      count: filteredCount,
+      pagination: {
+        total: filteredCount,
+        page: numPage,
+        limit: numLimit,
+        pages
+      },
+      summary: {
+        total: totalSegmentCount,
+        activeCount,
+        lastEvaluatedAt: segment.lastEvaluatedAt
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/segments/:id/export — export full customer list for segment as CSV
+router.get('/:id/export', async (req, res) => {
   try {
     const orgId = req.session.orgId;
     const segment = await Segment.findOne({ _id: req.params.id, organization: orgId });
     if (!segment) return res.status(404).json({ error: 'Segment not found' });
 
     const segOrgId = segment.organization?.toString() || orgId;
-    const query = buildQuery(segOrgId, segment.conditions, segment.conditionGroups, segment.groupsMatch || 'all');
-    const customers = await Customer.find(query)
-      .select('name email phoneNo emailStatus allowBroadcast attributes tags')
-      .limit(200)
+    const baseQuery = buildQuery(segOrgId, segment.conditions, segment.conditionGroups, segment.groupsMatch || 'all');
+
+    const customers = await Customer.find(baseQuery)
+      .select('name email phoneNo emailStatus allowBroadcast attributes createdAt')
+      .sort({ createdAt: -1 })
       .lean();
 
-    const fullCount = await Customer.countDocuments(query);
-    // Detail view customer list is limited to 200 for display, but that limit is NEVER written back to persisted cachedCount
-    res.json({ success: true, data: customers, count: fullCount });
+    const headers = ['Name', 'Email', 'Phone', 'Email Status', 'Allow Broadcast', 'Created At'];
+    const rows = customers.map(c => [
+      `"${(c.name || '').replace(/"/g, '""')}"`,
+      `"${(c.email || '').replace(/"/g, '""')}"`,
+      `"${(c.phoneNo || '').replace(/"/g, '""')}"`,
+      `"${(c.emailStatus || 'active').replace(/"/g, '""')}"`,
+      `"${c.allowBroadcast ? 'Yes' : 'No'}"`,
+      `"${c.createdAt ? new Date(c.createdAt).toISOString() : ''}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+
+    const filename = `segment-${segment.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}-export.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.status(200).send(csvContent);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -95,7 +95,11 @@ export const CustomersPage: React.FC = () => {
       if (attrKey && attrVal) query += `&attrKey=${attrKey}&attrVal=${encodeURIComponent(attrVal)}&attrOp=${attrOp}`;
 
       const res = await api.get(query);
-      setCustomers(res.data || []);
+      const rawData = res.data || [];
+      const uniqueData = Array.from(
+        new Map(rawData.map((item: any) => [item._id || item.id, item])).values()
+      );
+      setCustomers(uniqueData as Customer[]);
       setTotal(res.pagination?.total || 0);
     } catch (err: any) {
       showToast('Error loading customers', err.message, 'error');
@@ -247,19 +251,32 @@ export const CustomersPage: React.FC = () => {
 
   const handleImportCsv = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!csvFile) return;
+    if (!csvFile) {
+      showToast('File Required', 'Please select a CSV file to import', 'warning');
+      return;
+    }
 
-    const formData = new FormData();
-    formData.append('file', csvFile);
+    if (!csvFile.name.toLowerCase().endsWith('.csv')) {
+      showToast('Invalid File Format', 'Please select a valid .csv file', 'error');
+      return;
+    }
 
+    setLoading(true);
     try {
-      await api.post('/api/customers/import', formData);
-      showToast('Imported', 'CSV import completed successfully', 'success');
+      const formData = new FormData();
+      formData.append('file', csvFile);
+
+      const res = await api.postFormData('/api/customers/import', formData);
+      const count = res.count || res.inserted || 0;
+      showToast('Import Successful', `Successfully imported ${count} customer(s)`, 'success');
       setShowImportModal(false);
       setCsvFile(null);
-      loadCustomers();
+      setPage(1);
+      await loadCustomers();
     } catch (err: any) {
-      showToast('Import Failed', err.message, 'error');
+      showToast('Import Error', err.message || 'Failed to import CSV file', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -485,7 +502,7 @@ export const CustomersPage: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  customers.map((c) => {
+                  customers.map((c, idx) => {
                     const name = (c.name || '').trim() || 'Unknown';
                     const phone = (c.phoneNo || '').trim();
                     const email = (c.email || '').trim().toLowerCase();
@@ -497,7 +514,7 @@ export const CustomersPage: React.FC = () => {
                     const industry = c.attributes?.find((a: any) => a.k === 'industry')?.v_str || '—';
 
                     return (
-                      <tr key={c._id} className={selectedIds.includes(c._id) ? 'row-selected' : ''}>
+                      <tr key={c._id ? `${c._id}-${idx}` : `cust-${idx}`} className={selectedIds.includes(c._id) ? 'row-selected' : ''}>
                         <td onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
@@ -596,7 +613,7 @@ export const CustomersPage: React.FC = () => {
               <p className="dashed-title">No customers found</p>
             </div>
           ) : (
-            customers.map((c) => {
+            customers.map((c, idx) => {
               const name = c.name || 'Unknown';
               const plan = c.attributes?.find((a: any) => a.k === 'plan')?.v_str || '—';
               const leadScore = c.attributes?.find((a: any) => a.k === 'lead_score')?.v_num ?? '—';
@@ -604,7 +621,7 @@ export const CustomersPage: React.FC = () => {
               const statusColorMap: Record<string, string> = { active: '#10b981', unsubscribed: '#ef4444', bounced: '#f59e0b', complained: '#f97316' };
               const statusColor = statusColorMap[c.emailStatus] || '#71717a';
               return (
-                <div key={c._id} className="cust-card">
+                <div key={c._id ? `${c._id}-${idx}` : `cust-${idx}`} className="cust-card">
                   <div className="cust-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                     <span className="cust-card-name" style={{ fontWeight: 700, fontSize: 14 }}>{name}</span>
                     <div style={{ display: 'flex', gap: 6 }}>
@@ -735,7 +752,7 @@ export const CustomersPage: React.FC = () => {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {viewingCustomer.attributes && viewingCustomer.attributes.length > 0 ? (
                     viewingCustomer.attributes.map((a: any, idx: number) => (
-                      <div key={idx} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 6, fontSize: 12 }}>
+                      <div key={a.k ? `${a.k}-${idx}` : `attr-${idx}`} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 6, fontSize: 12 }}>
                         <b>{a.k}</b>: {String(a.v_str ?? a.v_num ?? a.v_date ?? '—')}
                       </div>
                     ))
@@ -1006,32 +1023,66 @@ export const CustomersPage: React.FC = () => {
       {/* Import Modal */}
       {showImportModal && (
         <div className="modal-overlay">
-          <div className="modal-card" style={{ maxWidth: 540 }}>
+          <div className="modal-card" style={{ maxWidth: 520 }}>
             <div className="modal-header">
-              <h2 className="modal-title">Import CSV / Excel</h2>
+              <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Upload style={{ width: 18, height: 18, color: 'var(--primary)' }} />
+                Import Customers (.csv only)
+              </h2>
               <button className="modal-close" onClick={() => setShowImportModal(false)}>
                 <X style={{ width: 16, height: 16 }} />
               </button>
             </div>
             <form onSubmit={handleImportCsv}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Select CSV File</label>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
+                  Upload a <strong>.csv</strong> file containing customer contacts. Column headers like Name, Phone, Email, City, Plan, Company, Lead Score, etc. will be automatically mapped.
+                </p>
+
+                <div
+                  style={{
+                    border: '2px dashed var(--border)',
+                    borderRadius: 8,
+                    padding: '24px 16px',
+                    textAlign: 'center',
+                    background: 'var(--bg-elevated)',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => document.getElementById('customer-csv-import-file-input')?.click()}
+                >
+                  <Upload style={{ width: 32, height: 32, color: 'var(--primary)', marginBottom: 8 }} />
+                  <p style={{ margin: '0 0 4px 0', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+                    {csvFile ? csvFile.name : 'Click to select CSV file'}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+                    {csvFile ? `${(csvFile.size / 1024).toFixed(1)} KB` : 'Accepts .csv files only'}
+                  </p>
                   <input
+                    id="customer-csv-import-file-input"
                     type="file"
                     accept=".csv"
-                    className="property-input"
+                    style={{ display: 'none' }}
                     required
-                    onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (!file.name.toLowerCase().endsWith('.csv')) {
+                          showToast('Invalid File Format', 'Only .csv files are supported', 'error');
+                          setCsvFile(null);
+                        } else {
+                          setCsvFile(file);
+                        }
+                      }
+                    }}
                   />
                 </div>
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowImportModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn">
-                  Upload & Import
+                <button type="submit" className="btn" disabled={!csvFile || loading}>
+                  {loading ? 'Importing...' : 'Upload & Import Customers'}
                 </button>
               </div>
             </form>

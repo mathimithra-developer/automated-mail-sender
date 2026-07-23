@@ -129,7 +129,7 @@ export const ABTestsPage: React.FC = () => {
             <p className="dashed-desc">Set up a split test to compare two existing campaigns.</p>
           </div>
         ) : (
-          abTests.map((test: any) => {
+          abTests.map((test: any, idx: number) => {
             const campAName = test.campaignA?.name || '—';
             const campBName = test.campaignB?.name || '—';
             const numA = getVariantRateNumeric(test, 'A');
@@ -138,7 +138,7 @@ export const ABTestsPage: React.FC = () => {
             const metricLabel = formatMetricLabel(test.winnerMetric);
 
             return (
-              <div key={test._id} className="abtest-item">
+              <div key={test._id ? `${test._id}-${idx}` : `abtest-${idx}`} className="abtest-item">
                 <div className="abtest-item-header">
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -218,8 +218,8 @@ export const ABTestsPage: React.FC = () => {
                     <label className="form-label">Variant A — Campaign *</label>
                     <select className="property-select" required value={campaignA} onChange={(e) => setCampaignA(e.target.value)}>
                       <option value="">Select Campaign A...</option>
-                      {campaigns.filter((c) => c._id !== campaignB).map((c) => (
-                        <option key={c._id} value={c._id}>{c.name}</option>
+                      {campaigns.filter((c) => c._id !== campaignB).map((c, idx) => (
+                        <option key={c._id ? `${c._id}-${idx}` : `optA-${idx}`} value={c._id}>{c.name}</option>
                       ))}
                     </select>
                   </div>
@@ -227,8 +227,8 @@ export const ABTestsPage: React.FC = () => {
                     <label className="form-label">Variant B — Campaign *</label>
                     <select className="property-select" required value={campaignB} onChange={(e) => setCampaignB(e.target.value)}>
                       <option value="">Select Campaign B...</option>
-                      {campaigns.filter((c) => c._id !== campaignA).map((c) => (
-                        <option key={c._id} value={c._id}>{c.name}</option>
+                      {campaigns.filter((c) => c._id !== campaignA).map((c, idx) => (
+                        <option key={c._id ? `${c._id}-${idx}` : `optB-${idx}`} value={c._id}>{c.name}</option>
                       ))}
                     </select>
                   </div>
