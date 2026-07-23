@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — MailFlow</title>
+  <meta name="description" content="Sign in to your MailFlow organization to manage email campaigns, customers, and segments.">
+  <link rel="stylesheet" href="auth.css?v=3">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%233b82f6'/><path d='M6 10l10 8 10-8' stroke='white' stroke-width='2' fill='none'/><rect x='6' y='10' width='20' height='14' rx='2' stroke='white' stroke-width='2' fill='none'/></svg>">
+</head>
+<body>
+
+<!-- Animated background -->
+<div class="auth-bg"></div>
+
+<!-- Mobile topbar -->
+<nav class="auth-topbar">
+  <div class="auth-panel-logo">
+    <div class="auth-panel-logo-icon" style="background:var(--auth-primary);border:none">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2">
+        <rect x="2" y="4" width="20" height="16" rx="3"/>
+        <path d="M2 8l10 7 10-7"/>
+      </svg>
+    </div>
+    <span style="font-size:1rem;font-weight:800;color:var(--auth-text)">MailFlow</span>
+  </div>
+  <a href="/signup" class="shad-btn shad-btn-outline shad-btn-sm" style="width:auto;padding:0 14px">Create account</a>
+</nav>
+
+<div class="auth-root">
+
+  <!-- ── Brand Panel ────────────────────────────────────────── -->
+  <aside class="auth-panel">
+    <div class="auth-panel-logo">
+      <div class="auth-panel-logo-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2">
+          <rect x="2" y="4" width="20" height="16" rx="3"/>
+          <path d="M2 8l10 7 10-7"/>
+        </svg>
+      </div>
+      <span class="auth-panel-logo-text">MailFlow</span>
+      <span class="auth-panel-logo-badge">Pro</span>
+    </div>
+
+    <div class="auth-panel-hero">
+      <div class="auth-panel-tag">
+        <span class="auth-panel-tag-dot"></span>
+        Trusted by 2,000+ organizations
+      </div>
+      <h1 class="auth-panel-title">
+        Email marketing<br><span>that converts</span>
+      </h1>
+      <p class="auth-panel-desc">
+        Orchestrate beautiful campaigns, build smart customer segments, and track every open and click — all in one place.
+      </p>
+      <div class="auth-panel-features">
+        <div class="auth-panel-feature">
+          <div class="auth-panel-feature-icon" style="background:rgba(255,255,255,0.15)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <div class="auth-panel-feature-body">
+            <strong>Customer Segmentation</strong>
+            <span>Target the right audience with dynamic rule-based segments</span>
+          </div>
+        </div>
+        <div class="auth-panel-feature">
+          <div class="auth-panel-feature-icon" style="background:rgba(255,255,255,0.15)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+          </div>
+          <div class="auth-panel-feature-body">
+            <strong>Real-time Analytics</strong>
+            <span>Open rates, clicks, and conversions tracked live</span>
+          </div>
+        </div>
+        <div class="auth-panel-feature">
+          <div class="auth-panel-feature-icon" style="background:rgba(255,255,255,0.15)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </div>
+          <div class="auth-panel-feature-body">
+            <strong>Smart Campaigns</strong>
+            <span>Schedule, automate, and A/B test email campaigns</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-panel-stats">
+      <div>
+        <div class="auth-panel-stat-val">98.7%</div>
+        <div class="auth-panel-stat-lbl">Delivery Rate</div>
+      </div>
+      <div>
+        <div class="auth-panel-stat-val">2M+</div>
+        <div class="auth-panel-stat-lbl">Emails Sent</div>
+      </div>
+      <div>
+        <div class="auth-panel-stat-val">4.9★</div>
+        <div class="auth-panel-stat-lbl">Rating</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Sign In Form ───────────────────────────────────────── -->
+  <div class="auth-form-area">
+    <div class="auth-form-card">
+
+      <div style="display:flex; flex-direction:column; align-items:center; text-align:center; margin-bottom:28px">
+        <!-- Logo Badge -->
+        <div style="background:var(--auth-primary); width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2); margin-bottom:14px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2">
+            <rect x="2" y="4" width="20" height="16" rx="3"/>
+            <path d="M2 8l10 7 10-7"/>
+          </svg>
+        </div>
+        <!-- Welcome Badge -->
+        <div style="background:rgba(37, 99, 235, 0.1); color:var(--auth-primary); font-size:0.75rem; font-weight:600; padding:5px 12px; border-radius:99px; margin-bottom:14px; display:inline-flex; align-items:center; gap:5px">
+          <span style="display:inline-block; width:6px; height:6px; background:var(--auth-primary); border-radius:50%"></span>
+          Welcome to MailFlow
+        </div>
+        <h1 class="auth-card-title" style="margin:0 0 6px 0; font-size:1.5rem">Welcome back</h1>
+        <p class="auth-card-desc" style="margin:0; font-size:0.875rem">Sign in to your organization's dashboard</p>
+      </div>
+
+      <div id="errorAlert" class="shad-alert shad-alert-error" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="errorText">Invalid credentials.</span>
+      </div>
+
+      <form id="loginForm" novalidate>
+        <div class="shad-field">
+          <label class="shad-label" for="email" style="display:flex;align-items:center;gap:6px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--auth-primary)">
+              <rect x="2" y="4" width="20" height="16" rx="3"/><path d="M2 8l10 7 10-7"/>
+            </svg>
+            Email Address <span class="required">*</span>
+          </label>
+          <div class="shad-input-wrap">
+            <input type="email" id="email" name="email" class="shad-input" style="padding-left:14px" placeholder="Enter your email" required autocomplete="email">
+          </div>
+        </div>
+
+        <div class="shad-field">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label class="shad-label" for="password" style="margin-bottom:0;display:flex;align-items:center;gap:6px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--auth-primary)">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              Password <span class="required">*</span>
+            </label>
+            <a href="#" style="font-size:0.75rem;color:var(--auth-primary);text-decoration:none;font-weight:500">Forgot password?</a>
+          </div>
+          <div class="shad-input-wrap">
+            <input type="password" id="password" name="password" class="shad-input" style="padding-left:14px" placeholder="Enter your password" required autocomplete="current-password">
+            <button type="button" class="shad-pw-toggle" id="pwToggle" aria-label="Toggle password" style="right:12px">
+              <svg id="pwEye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="shad-check-row" style="margin-bottom:20px">
+          <input type="checkbox" id="rememberMe" name="rememberMe">
+          <label class="shad-check-label" for="rememberMe">Keep me signed in for 30 days</label>
+        </div>
+
+        <button type="submit" class="shad-btn" id="loginBtn">
+          Sign In
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        Don't have an account? <a href="/signup">Register</a>
+      </div>
+      <div class="auth-footer" style="margin-top:10px;font-size:0.7rem">
+        By signing in, you agree to our <a href="#" style="color:var(--auth-primary)" onclick="event.preventDefault(); openPolicyModal('tos')">Terms of Service</a> and <a href="#" style="color:var(--auth-primary)" onclick="event.preventDefault(); openPolicyModal('privacy')">Privacy Policy</a>.
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ POLICY MODALS ══════════ -->
+<div class="policy-modal-overlay" id="policyModalOverlay" onclick="closePolicyModal(event)">
+  <div class="policy-modal" onclick="event.stopPropagation()">
+    <div class="policy-modal-header">
+      <h3 id="policyModalTitle">Terms of Service</h3>
+      <button class="policy-modal-close" onclick="closePolicyModal()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="policy-modal-body" id="policyModalBody"></div>
+  </div>
+</div>
+
+<script>
+  // ── Policy Modal Content ─────────────────────────────────────
+  const policyContent = {
+    tos: `
+      <h4>1. Acceptance of Terms</h4>
+      <p>By creating an account and using the MailFlow platform, you agree to be bound by these Terms of Service. If you do not agree with any part of these terms, you may not access the service.</p>
+      <h4>2. Account Responsibilities</h4>
+      <ul>
+        <li>You must provide accurate, current, and complete information during registration.</li>
+        <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
+        <li>You must notify us immediately of any unauthorized use of your account.</li>
+      </ul>
+      <h4>3. Acceptable Use</h4>
+      <ul>
+        <li>You may not use MailFlow to send unsolicited or spam emails.</li>
+        <li>All email campaigns must comply with applicable anti-spam laws (CAN-SPAM, GDPR, etc.).</li>
+        <li>You must include a working unsubscribe link in all marketing emails.</li>
+      </ul>
+      <h4>4. Data Ownership</h4>
+      <p>You retain ownership of all customer data and email content you upload. MailFlow will not share, sell, or use your data for purposes other than providing the service.</p>
+      <h4>5. Service Availability</h4>
+      <p>We strive for 99.9% uptime but do not guarantee uninterrupted access. Scheduled maintenance will be communicated in advance.</p>
+      <h4>6. Termination</h4>
+      <p>We reserve the right to suspend or terminate accounts that violate these terms. You may delete your account at any time from the account settings page.</p>
+    `,
+    privacy: `
+      <h4>1. Information We Collect</h4>
+      <ul>
+        <li><strong>Account Data:</strong> Name, email address, phone number, and organization details you provide during registration.</li>
+        <li><strong>Usage Data:</strong> Login timestamps, feature usage patterns, and campaign performance metrics.</li>
+        <li><strong>Customer Data:</strong> Contact information you upload for email campaign recipients.</li>
+        <li><strong>Customer Data:</strong> Contact information you upload for email campaign recipients.</li>
+      </ul>
+      <h4>2. How We Use Your Information</h4>
+      <ul>
+        <li>To provide, operate, and maintain the MailFlow platform.</li>
+        <li>To process and deliver your email campaigns.</li>
+        <li>To send you service-related notifications and updates.</li>
+        <li>To improve our services through aggregated, anonymized analytics.</li>
+      </ul>
+      <h4>3. Data Protection</h4>
+      <p>We implement industry-standard security measures including encryption in transit (TLS) and at rest (AES-256). Access to personal data is restricted to authorized personnel only.</p>
+      <h4>4. Third-Party Sharing</h4>
+      <p>We do not sell your personal information. We may share data only with service providers necessary for platform operations (e.g., email delivery infrastructure), under strict data processing agreements.</p>
+      <h4>5. Your Rights</h4>
+      <ul>
+        <li>Access, correct, or delete your personal data at any time.</li>
+        <li>Export your data in a portable format.</li>
+        <li>Opt out of non-essential communications.</li>
+      </ul>
+      <h4>6. Contact Us</h4>
+      <p>For privacy-related inquiries, contact us at <strong>privacy@mailflow.com</strong>.</p>
+    `
+  };
+
+  function openPolicyModal(type) {
+    const overlay = document.getElementById('policyModalOverlay');
+    document.getElementById('policyModalTitle').textContent = type === 'tos' ? 'Terms of Service' : 'Privacy Policy';
+    document.getElementById('policyModalBody').innerHTML = policyContent[type];
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePolicyModal(e) {
+    if (e && e.target !== e.currentTarget) return;
+    document.getElementById('policyModalOverlay').classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  // Password toggle
+  document.getElementById('pwToggle').addEventListener('click', () => {
+    const pw = document.getElementById('password');
+    pw.type = pw.type === 'password' ? 'text' : 'password';
+  });
+
+  // Login form
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    const errAlert = document.getElementById('errorAlert');
+    const errText = document.getElementById('errorText');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="shad-spinner"></span> Signing in…';
+    errAlert.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Invalid credentials');
+      window.location.href = '/dashboard';
+    } catch (err) {
+      errText.textContent = err.message;
+      errAlert.style.display = 'flex';
+      btn.disabled = false;
+      btn.innerHTML = 'Sign In <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>';
+    }
+  });
+</script>
+</body>
+</html>
+

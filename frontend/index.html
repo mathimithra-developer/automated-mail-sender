@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MailFlow — Dashboard</title>
+  <meta name="description" content="MailFlow — AI-powered email marketing platform for organizations">
+  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%233b82f6'/><path d='M6 10l10 8 10-8' stroke='white' stroke-width='2' fill='none'/><rect x='6' y='10' width='20' height='14' rx='2' stroke='white' stroke-width='2' fill='none'/></svg>">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<div class="dashboard-layout">
+
+  <!-- ══════════════════════════════════════════════════
+       SIDEBAR
+  ════════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Brand + Nav wrapper -->
+    <div style="flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column;">
+      <div class="sidebar-brand">
+        <div class="sidebar-brand-row">
+          <div class="sidebar-brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <rect x="2" y="4" width="20" height="16" rx="3"/>
+              <path d="M2 8l10 7 10-7"/>
+            </svg>
+          </div>
+          <span class="brand-name">MailFlow</span>
+        </div>
+        <span id="orgNameIndicator" class="org-name">Loading…</span>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Overview</div>
+        <a class="nav-item active" data-target="dashboard" id="nav-dashboard">
+          <i data-lucide="layout-dashboard"></i>Dashboard
+        </a>
+
+        <div class="nav-section-label">Audience</div>
+        <a class="nav-item" data-target="customers" id="nav-customers">
+          <i data-lucide="users"></i>Customers
+        </a>
+        <a class="nav-item" data-target="segments" id="nav-segments">
+          <i data-lucide="layers"></i>Segments
+        </a>
+
+        <div class="nav-section-label">Email</div>
+        <a class="nav-item" data-target="templates" id="nav-templates">
+          <i data-lucide="mail"></i>Mail Builder
+        </a>
+        <a class="nav-item" data-target="campaigns" id="nav-campaigns">
+          <i data-lucide="send"></i>Campaigns
+        </a>
+        <a class="nav-item" data-target="abtests" id="nav-abtests">
+          <i data-lucide="git-branch"></i>A/B Tests
+        </a>
+
+        <div class="nav-section-label">Media</div>
+        <a class="nav-item" data-target="assets" id="nav-assets">
+          <i data-lucide="image"></i>Assets
+        </a>
+
+        <div class="nav-section-label">Account</div>
+        <a class="nav-item" data-target="settings" id="nav-settings">
+          <i data-lucide="settings"></i>Settings
+        </a>
+      </nav>
+    </div>
+
+    <!-- Footer: user profile -->
+    <div class="sidebar-footer">
+      <div class="user-profile">
+        <div id="userAvatar" class="user-avatar">U</div>
+        <div class="user-details">
+          <p id="userNameIndicator" class="user-name">Loading…</p>
+          <p id="userEmailIndicator" class="user-email">email@org.com</p>
+        </div>
+      </div>
+      <button id="logoutBtn" class="logout-btn">
+        <i data-lucide="log-out"></i>Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- ══════════════════════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ══════════════════ DASHBOARD ══════════════════ -->
+    <section id="dashboard" class="page active">
+      <div class="page-header">
+        <div>
+          <p class="breadcrumb"><i data-lucide="layout-dashboard" style="width:12px;height:12px"></i> Dashboard</p>
+          <h1 id="welcomeHeader" class="page-title">Welcome back!</h1>
+          <p class="page-description">Here's your complete overview for today.</p>
+        </div>
+        <button class="btn btn-secondary" onclick="loadDashboard()" style="gap:6px">
+          <i data-lucide="refresh-cw"></i> Refresh
+        </button>
+      </div>
+
+      <!-- KPI Grid -->
+      <div class="grid-4" id="kpiGrid" style="margin-bottom:16px">
+        <div class="kpi-card kpi-purple">
+          <div class="kpi-icon"><i data-lucide="users"></i></div>
+          <div class="kpi-body">
+            <p class="kpi-label">Total Customers</p>
+            <p class="kpi-value" id="statCustomers">—</p>
+            <p class="kpi-sub">
+              <span id="statActive" class="kpi-green">—</span> active ·
+              <span id="statUnsub" class="kpi-red">—</span> unsub
+            </p>
+          </div>
+        </div>
+        <div class="kpi-card kpi-blue">
+          <div class="kpi-icon"><i data-lucide="layers"></i></div>
+          <div class="kpi-body">
+            <p class="kpi-label">Segments</p>
+            <p class="kpi-value" id="statSegments">—</p>
+            <p class="kpi-sub">audience groups</p>
+          </div>
+        </div>
+        <div class="kpi-card kpi-green">
+          <div class="kpi-icon"><i data-lucide="mail"></i></div>
+          <div class="kpi-body">
+            <p class="kpi-label">Templates</p>
+            <p class="kpi-value" id="statTemplates">—</p>
+            <p class="kpi-sub">email designs</p>
+          </div>
+        </div>
+        <div class="kpi-card kpi-orange">
+          <div class="kpi-icon"><i data-lucide="send"></i></div>
+          <div class="kpi-body">
+            <p class="kpi-label">Campaigns</p>
+            <p class="kpi-value" id="statCampaigns">—</p>
+            <p class="kpi-sub"><span id="statABTests">—</span> A/B tests</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance Metrics -->
+      <div class="dash-perf-row" style="margin-bottom:16px">
+        <div class="perf-card">
+          <div class="perf-label"><i data-lucide="send" style="width:12px;height:12px"></i>Emails Sent</div>
+          <div class="perf-value" id="statTotalSent">—</div>
+          <div class="perf-bar-wrap"><div class="perf-bar perf-bar-gray" id="barSent" style="width:100%"></div></div>
+        </div>
+        <div class="perf-card">
+          <div class="perf-label"><i data-lucide="eye" style="width:12px;height:12px"></i>Open Rate</div>
+          <div class="perf-value" id="statOpenRate">—%</div>
+          <div class="perf-bar-wrap"><div class="perf-bar perf-bar-green" id="barOpen" style="width:0%"></div></div>
+        </div>
+        <div class="perf-card">
+          <div class="perf-label"><i data-lucide="mouse-pointer" style="width:12px;height:12px"></i>Click Rate</div>
+          <div class="perf-value" id="statClickRate">—%</div>
+          <div class="perf-bar-wrap"><div class="perf-bar perf-bar-blue" id="barClick" style="width:0%"></div></div>
+        </div>
+        <div class="perf-card">
+          <div class="perf-label"><i data-lucide="git-branch" style="width:12px;height:12px"></i>A/B Tests Run</div>
+          <div class="perf-value" id="statABTests2">—</div>
+          <div class="perf-bar-wrap"><div class="perf-bar perf-bar-purple" id="barAB" style="width:60%"></div></div>
+        </div>
+      </div>
+
+      <!-- Recent Campaigns + Top Segments -->
+      <div class="grid-3-2" style="margin-bottom:16px">
+        <div class="dashboard-card">
+          <div class="card-header">
+            <div><p class="card-title">Recent Campaigns</p></div>
+            <button class="btn btn-secondary btn-sm" onclick="nav('campaigns')">View All</button>
+          </div>
+          <div id="recentCampaignsList">
+            <div class="dashed-card">
+              <div class="dashed-icon"><i data-lucide="send"></i></div>
+              <p class="dashed-title">No campaigns yet</p>
+              <p class="dashed-desc">Create your first campaign to see it here.</p>
+            </div>
+          </div>
+        </div>
+        <div class="dashboard-card">
+          <div class="card-header">
+            <div><p class="card-title">Top Segments</p></div>
+            <button class="btn btn-secondary btn-sm" onclick="nav('segments')">View All</button>
+          </div>
+          <div id="topSegmentsList">
+            <div class="dashed-card" style="padding:24px">
+              <div class="dashed-icon"><i data-lucide="layers"></i></div>
+              <p class="dashed-title">No segments yet</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Customers + Quick Actions -->
+      <div class="grid-3-2">
+        <div class="dashboard-card">
+          <div class="card-header">
+            <div><p class="card-title">Recent Customers</p></div>
+            <button class="btn btn-secondary btn-sm" onclick="nav('customers')">View All</button>
+          </div>
+          <div id="recentCustomersList">
+            <div style="text-align:center;color:var(--text-muted);padding:24px;font-size:13px">Loading…</div>
+          </div>
+        </div>
+        <div class="dashboard-card">
+          <div class="card-header">
+            <div><p class="card-title">Quick Actions</p></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="quick-action" onclick="nav('campaigns')">
+              <div class="quick-action-icon" style="background:var(--primary-subtle);color:var(--primary)"><i data-lucide="send"></i></div>
+              <div class="quick-action-text"><strong>Create Campaign</strong><span>Send to your segments</span></div>
+            </button>
+            <button class="quick-action" onclick="nav('customers')">
+              <div class="quick-action-icon" style="background:var(--success-bg);color:var(--success)"><i data-lucide="upload"></i></div>
+              <div class="quick-action-text"><strong>Import Customers</strong><span>Upload a CSV file</span></div>
+            </button>
+            <button class="quick-action" onclick="nav('templates')">
+              <div class="quick-action-icon" style="background:hsla(262 83% 68%/0.12);color:var(--accent-purple)"><i data-lucide="layout"></i></div>
+              <div class="quick-action-text"><strong>Design Template</strong><span>Drag-drop email builder</span></div>
+            </button>
+            <button class="quick-action" onclick="nav('segments')">
+              <div class="quick-action-icon" style="background:var(--warning-bg);color:var(--warning)"><i data-lucide="layers"></i></div>
+              <div class="quick-action-text"><strong>Create Segment</strong><span>Build audience rules</span></div>
+            </button>
+            <button class="quick-action" onclick="nav('abtests')">
+              <div class="quick-action-icon" style="background:hsla(199 89% 48%/0.1);color:var(--info)"><i data-lucide="git-branch"></i></div>
+              <div class="quick-action-text"><strong>Run A/B Test</strong><span>Compare campaign variants</span></div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ══════════════════ CUSTOMERS ══════════════════ -->
+    <section id="customers" class="page">
+      <div class="page-header">
+        <div>
+          <p class="breadcrumb"><i data-lucide="users" style="width:12px;height:12px"></i>Customers</p>
+          <h1 class="page-title">Customers</h1>
+          <p class="page-description">Manage contacts, custom attributes, and tags.</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="showImportModal()">
+            <i data-lucide="upload"></i>Import CSV / Excel
+          </button>
+          <button class="btn" onclick="showAddCustomerModal()">
+            <i data-lucide="plus"></i>Add Customer
+          </button>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-wrap" style="max-width:260px">
+          <i data-lucide="search"></i>
+          <input type="text" id="customerSearch" class="search-input" placeholder="Search name, email, phone…" oninput="debounce(loadCustomers,400)()">
+        </div>
+        <select id="custStatusFilter" class="property-select" style="width:130px" onchange="loadCustomers()">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="unsubscribed">Unsubscribed</option>
+          <option value="bounced">Bounced</option>
+        </select>
+        <select id="custBroadcastFilter" class="property-select" style="width:150px" onchange="loadCustomers()">
+          <option value="">All Broadcast</option>
+          <option value="true">Allow Broadcast</option>
+          <option value="false">No Broadcast</option>
+        </select>
+        <select id="custAttrKey" class="property-select" style="width:120px" onchange="updateCustomerFilterOperators()">
+          <option value="">Attr Filter…</option>
+          <option>city</option><option>plan</option>
+          <option>lead_score</option><option>industry</option>
+        </select>
+        <input type="text" id="custAttrVal" placeholder="Value…" class="property-input" style="width:90px">
+        <select id="custAttrOp" class="property-select" style="width:100px">
+          <option value="eq">=</option>
+        </select>
+        <button class="btn btn-secondary" onclick="loadCustomers()"><i data-lucide="filter"></i>Filter</button>
+        <button class="btn btn-ghost" id="custClearFiltersBtn" onclick="clearCustomerFilters()" title="Clear all filters" style="display:none;color:var(--error)">
+          <i data-lucide="x-circle"></i>Clear Filters
+        </button>
+
+        <div class="toolbar-right">
+          <span id="customerCountBadge">Total: 0</span>
+          <div class="view-toggle">
+            <button id="custCardViewBtn" class="view-toggle-btn" onclick="setCustomerView('card')" title="Card View">
+              <i data-lucide="layout-grid"></i>
+            </button>
+            <button id="custTableViewBtn" class="view-toggle-btn active" onclick="setCustomerView('table')" title="Table View">
+              <i data-lucide="list"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Action Bar -->
+      <div id="custBulkBar" class="bulk-action-bar" style="display:none">
+        <div class="bulk-action-info">
+          <i data-lucide="check-square" style="width:15px;height:15px;color:var(--primary)"></i>
+          <span id="custSelectedCount">0</span> customer(s) selected
+        </div>
+        <div class="bulk-action-btns">
+          <button class="btn btn-secondary" onclick="toggleSelectAll(document.getElementById('selectAllCheckbox'))" id="selectAllToggleBtn">
+            <i data-lucide="check-square"></i>Select All on Page
+          </button>
+          <button class="btn" style="background:var(--error);color:#fff;border-color:var(--error)" onclick="deleteSelectedCustomers()">
+            <i data-lucide="trash-2"></i>Delete Selected
+          </button>
+          <button class="btn btn-secondary" onclick="clearCustomerSelection()">
+            <i data-lucide="x"></i>Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Table View -->
+      <div class="table-wrap" id="customersTableWrap">
+        <div class="table-wrap-inner">
+        <table class="data-table" id="customersTable">
+          <thead>
+            <tr>
+              <th class="cust-th-check">
+                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" class="cust-checkbox" title="Select all on this page">
+              </th>
+              <th style="min-width:140px">Name</th>
+              <th style="min-width:120px">Phone</th>
+              <th style="min-width:160px">Email</th>
+              <th style="min-width:80px">City</th>
+              <th style="min-width:70px">Plan</th>
+              <th style="min-width:90px;text-align:center">Lead Score</th>
+              <th style="min-width:110px">Company</th>
+              <th style="min-width:100px">Industry</th>
+              <th style="min-width:100px;text-align:right;padding-right:16px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="customersBody">
+            <tr><td colspan="10" class="cust-td-empty">Loading…</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <!-- Card View -->
+      <div id="customersCards" class="cust-card-grid" style="display:none;margin-top:16px"></div>
+      <div id="customersPagination" class="table-pagination"></div>
+    </section>
+
+
+    <!-- ══════════════════ SEGMENTS ═══════════════════ -->
+    <section id="segments" class="page">
+      <div class="page-header">
+        <div>
+          <p class="breadcrumb"><i data-lucide="layers" style="width:12px;height:12px"></i>Segments</p>
+          <h1 class="page-title">Segments</h1>
+          <p class="page-description">Rule-based dynamic audience groups.</p>
+        </div>
+        <button class="btn" onclick="showAddSegmentModal()">
+          <i data-lucide="plus"></i>Create Segment
+        </button>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-wrap">
+          <i data-lucide="search"></i>
+          <input id="segmentSearch" type="text" class="search-input" placeholder="Search segments…" oninput="filterSegments()" autocomplete="off">
+        </div>
+        <select id="segmentStatusFilter" class="property-select" style="width:130px" onchange="filterSegments()">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+        <div class="toolbar-right">
+          <span id="segmentCount">Total Records (0)</span>
+          <div class="view-toggle">
+            <button id="segCardViewBtn" class="view-toggle-btn active" onclick="setSegmentView('card')" title="Card View">
+              <i data-lucide="layout-grid"></i>
+            </button>
+            <button id="segTableViewBtn" class="view-toggle-btn" onclick="setSegmentView('table')" title="Table View">
+              <i data-lucide="list"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card view -->
+      <div id="segmentsList" class="seg-card-grid"></div>
+
+      <!-- Table view -->
+      <div id="segmentsTable" style="display:none">
+        <div class="table-wrap">
+          <table class="data-table" style="width:100%">
+            <thead><tr>
+              <th>Name</th><th>Description</th>
+              <th>Conditions</th><th>Members</th><th style="text-align:right;padding-right:20px">Actions</th>
+            </tr></thead>
+            <tbody id="segmentsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="segmentsPagination" class="table-pagination"></div>
+    </section>
+
+
+    <!-- ══════════════════ MAIL BUILDER ═══════════════ -->
+    <section id="templates" class="page">
+      <div class="page-header" style="margin-bottom:8px">
+        <div>
+          <p class="breadcrumb"><i data-lucide="mail" style="width:12px;height:12px"></i>Mail Builder</p>
+          <h1 class="page-title">Mail Builder</h1>
+          <p class="page-description">Design responsive HTML emails with AI assistance.</p>
+        </div>
+      </div>
+
+      <div class="builder-workspace">
+        <!-- Header bar -->
+        <header class="builder-header">
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="text" id="templateNameInput" value="Untitled Template" class="builder-title-input">
+            <span id="autoSaveBadge" style="font-size:10px;color:var(--text-muted)"></span>
+          </div>
+          <div class="builder-actions" style="display:flex;align-items:center;gap:6px">
+            <!-- Group: Device Preview -->
+            <div class="btn-group" style="display:flex;align-items:center;gap:2px;background:var(--bg-elevated);padding:2px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+              <button class="btn btn-secondary btn-sm" id="viewToggleDesktop" title="Desktop preview" style="border:none;background:transparent;padding:6px 10px"><i data-lucide="monitor"></i></button>
+              <button class="btn btn-secondary btn-sm" id="viewToggleMobile" title="Mobile preview" style="border:none;background:transparent;padding:6px 10px"><i data-lucide="smartphone"></i></button>
+              <button class="btn btn-secondary btn-sm" id="darkPreviewBtn" title="Dark mode preview" style="border:none;background:transparent;padding:6px 10px"><i data-lucide="moon"></i></button>
+            </div>
+            
+            <span style="border-left:1px solid var(--border);height:20px;margin:0 2px"></span>
+            
+            <!-- Group: Undo / Redo -->
+            <div class="btn-group" style="display:flex;align-items:center;gap:2px;background:var(--bg-elevated);padding:2px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+              <button class="btn btn-secondary btn-sm" id="undoBtn" title="Undo" style="border:none;background:transparent;padding:6px 10px"><i data-lucide="undo-2"></i></button>
+              <button class="btn btn-secondary btn-sm" id="redoBtn" title="Redo" style="border:none;background:transparent;padding:6px 10px"><i data-lucide="redo-2"></i></button>
+            </div>
+            
+            <span style="border-left:1px solid var(--border);height:20px;margin:0 2px"></span>
+            
+            <!-- Group: File Actions -->
+            <div style="display:flex;align-items:center;gap:4px">
+              <button class="btn btn-secondary btn-sm" id="newTemplateBtn" title="Start new blank template"><i data-lucide="file-plus"></i>New</button>
+              <button class="btn btn-secondary btn-sm" id="exportHtmlBtn" title="Export raw HTML code"><i data-lucide="code"></i>HTML</button>
+              <button class="btn btn-secondary btn-sm" id="exportJsonBtn" title="Export template JSON config"><i data-lucide="download"></i>JSON</button>
+              <button class="btn btn-secondary btn-sm" id="importJsonBtn" title="Import existing template JSON"><i data-lucide="upload"></i>Import</button>
+            </div>
+            
+            <span style="border-left:1px solid var(--border);height:20px;margin:0 2px"></span>
+            
+            <!-- Group: Save / Discard -->
+            <div style="display:flex;align-items:center;gap:6px">
+              <button class="btn btn-secondary btn-sm" id="discardTemplateBtn" style="color:var(--error);border-color:var(--error);display:none;" title="Discard unsaved changes"><i data-lucide="rotate-ccw"></i>Discard</button>
+              <button class="btn btn-sm" id="saveTemplateBtn" title="Save current template to database" style="background:var(--primary);color:#fff"><i data-lucide="save"></i>Save</button>
+            </div>
+          </div>
+        </header>
+
+        <div class="builder-body">
+          <!-- Left Sidebar -->
+          <aside class="builder-sidebar">
+            <div class="sidebar-tabs">
+              <button class="sidebar-tab active" data-tab="blocks">Blocks</button>
+              <button class="sidebar-tab" data-tab="ai">AI</button>
+              <button class="sidebar-tab" data-tab="templates">Templates</button>
+              <button class="sidebar-tab" data-tab="history">History</button>
+            </div>
+
+            <!-- BLOCKS TAB -->
+            <div class="sidebar-tab-content active" id="tab-blocks">
+              <div class="builder-sidebar-section">
+                <p class="builder-sidebar-title">Layout</p>
+                <div class="builder-block-grid">
+                  <button class="builder-block-btn" data-layout="1-col"><i data-lucide="square"></i>1 Column</button>
+                  <button class="builder-block-btn" data-layout="2-col"><i data-lucide="columns-2"></i>2 Column</button>
+                  <button class="builder-block-btn" data-layout="3-col"><i data-lucide="columns-3"></i>3 Column</button>
+                </div>
+              </div>
+              <div class="builder-sidebar-section">
+                <p class="builder-sidebar-title">Content</p>
+                <div class="builder-block-grid">
+                  <button class="builder-block-btn" data-content="heading"><i data-lucide="heading-1"></i>Heading</button>
+                  <button class="builder-block-btn" data-content="paragraph"><i data-lucide="align-left"></i>Text</button>
+                  <button class="builder-block-btn" data-content="button"><i data-lucide="rectangle-horizontal"></i>Button</button>
+                  <button class="builder-block-btn" data-content="image"><i data-lucide="image"></i>Image</button>
+                  <button class="builder-block-btn" data-content="video"><i data-lucide="play-circle"></i>Video</button>
+                  <button class="builder-block-btn" data-content="divider"><i data-lucide="minus"></i>Divider</button>
+                  <button class="builder-block-btn" data-content="spacer"><i data-lucide="move-vertical"></i>Spacer</button>
+                  <button class="builder-block-btn" data-content="social"><i data-lucide="share-2"></i>Social</button>
+                  <button class="builder-block-btn" data-content="html"><i data-lucide="code-2"></i>HTML</button>
+                  <button class="builder-block-btn" data-content="menu"><i data-lucide="menu"></i>Menu</button>
+                  <button class="builder-block-btn" data-content="table"><i data-lucide="table"></i>Table</button>
+                  <button class="builder-block-btn" data-content="icons"><i data-lucide="star"></i>Icons</button>
+                  <button class="builder-block-btn" data-content="rating"><i data-lucide="star-half"></i>Rating</button>
+                </div>
+              </div>
+              <div class="builder-sidebar-section">
+                <p class="builder-sidebar-title">Commerce</p>
+                <div class="builder-block-grid">
+                  <button class="builder-block-btn" data-content="product-card"><i data-lucide="package"></i>Product</button>
+                  <button class="builder-block-btn" data-content="product-grid"><i data-lucide="grid-2x2"></i>Grid</button>
+                  <button class="builder-block-btn" data-content="coupon"><i data-lucide="ticket"></i>Coupon</button>
+                  <button class="builder-block-btn" data-content="countdown"><i data-lucide="timer"></i>Countdown</button>
+                  <button class="builder-block-btn" data-content="qr-code"><i data-lucide="qr-code"></i>QR Code</button>
+                </div>
+              </div>
+              <div class="builder-sidebar-section">
+                <p class="builder-sidebar-title">Interactive</p>
+                <div class="builder-block-grid">
+                  <button class="builder-block-btn" data-content="poll"><i data-lucide="bar-chart-2"></i>Poll</button>
+                  <button class="builder-block-btn" data-content="conditional"><i data-lucide="git-merge"></i>Conditional</button>
+                </div>
+              </div>
+              <div class="builder-sidebar-section">
+                <p class="builder-sidebar-title">Saved Blocks</p>
+                <div id="savedBlocksList"><p class="property-label" style="text-align:center;font-size:11px">No saved blocks.</p></div>
+              </div>
+              <div class="builder-sidebar-section" style="border-bottom:none">
+                <p class="builder-sidebar-title">Global Theme</p>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div class="property-row-flex">
+                    <span class="property-label">Font</span>
+                    <select id="globalFont" class="property-select" style="width:120px;padding:5px 8px;font-size:11px">
+                      <option value="Inter, sans-serif">Inter</option>
+                      <option value="Arial, sans-serif">Arial</option>
+                      <option value="Georgia, serif">Georgia</option>
+                      <option value="Helvetica, sans-serif">Helvetica</option>
+                      <option value="Courier New, monospace">Courier</option>
+                    </select>
+                  </div>
+                  <div class="property-row-flex">
+                    <span class="property-label">Background Color</span>
+                    <input type="color" id="globalBg" value="#f4f4f5" style="border:none;width:36px;height:28px;cursor:pointer;border-radius:4px;background:transparent">
+                  </div>
+                  <div class="property-row-flex">
+                    <span class="property-label">Text Color</span>
+                    <input type="color" id="globalText" value="#18181b" style="border:none;width:36px;height:28px;cursor:pointer;border-radius:4px;background:transparent">
+                  </div>
+                  <div class="property-row-flex">
+                    <span class="property-label">Link Color</span>
+                    <input type="color" id="globalLink" value="#8b5cf6" style="border:none;width:36px;height:28px;cursor:pointer;border-radius:4px;background:transparent">
+                  </div>
+                  <div class="property-row-flex">
+                    <span class="property-label">Button Color</span>
+                    <input type="color" id="globalBtnColor" value="#8b5cf6" style="border:none;width:36px;height:28px;cursor:pointer;border-radius:4px;background:transparent">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI TAB -->
+            <div class="sidebar-tab-content" id="tab-ai">
+              <div class="builder-sidebar-section">
+                <p class="builder-sidebar-title">AI Generate</p>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <textarea id="aiPromptInput" class="property-input" rows="4" placeholder="Write a promotional email for a summer sale with 30% discount…" style="font-size:12px;resize:vertical"></textarea>
+                  <button class="btn" id="aiGenerateBtn" style="width:100%;font-size:12px">Generate Email</button>
+                </div>
+              </div>
+              <div class="builder-sidebar-section">
+                <p class="builder-sidebar-title">Subject Lines</p>
+                <button class="btn btn-secondary" id="aiSubjectBtn" style="width:100%;font-size:12px;margin-bottom:8px">Generate Subject Lines</button>
+                <div id="subjectLineResults" style="display:flex;flex-direction:column;gap:4px"></div>
+              </div>
+              <div class="builder-sidebar-section">
+                <p class="builder-sidebar-title">Spam Analysis</p>
+                <button class="btn btn-secondary" id="spamCheckBtn" style="width:100%;font-size:12px;margin-bottom:8px">Check Spam Score</button>
+                <div id="spamResults"></div>
+              </div>
+              <div class="builder-sidebar-section" style="border-bottom:none">
+                <p class="builder-sidebar-title">Accessibility</p>
+                <button class="btn btn-secondary" id="a11yCheckBtn" style="width:100%;font-size:12px;margin-bottom:8px">Check Accessibility</button>
+                <div id="a11yResults"></div>
+              </div>
+            </div>
+
+            <!-- TEMPLATES TAB -->
+            <div class="sidebar-tab-content" id="tab-templates" style="padding: 0">
+              <div class="builder-sidebar-section" style="border-bottom:1px solid var(--border)">
+                <p class="builder-sidebar-title">My Saved Templates</p>
+                <div id="myTemplatesList" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;max-height:240px;overflow-y:auto;padding-right:4px">
+                  <p class="property-label" style="text-align:center;font-size:11px">No saved templates yet.</p>
+                </div>
+              </div>
+              <div class="builder-sidebar-section" style="border-bottom:none">
+                <p class="builder-sidebar-title" id="templatesTabTitle">Organization Templates</p>
+                <div id="industryTemplatesList" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+                  <p class="property-label" style="text-align:center;font-size:11px">Loading industry templates…</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- HISTORY TAB -->
+            <div class="sidebar-tab-content" id="tab-history">
+              <div class="builder-sidebar-section">
+                <p class="builder-sidebar-title">Version History</p>
+                <button class="btn btn-secondary" id="saveVersionBtn" style="width:100%;font-size:12px;margin-bottom:10px">
+                  <i data-lucide="bookmark" style="width:12px;height:12px"></i>Save Version
+                </button>
+                <div id="versionList" style="display:flex;flex-direction:column;gap:6px">
+                  <p style="font-size:11px;color:var(--text-muted)">Save template to DB first.</p>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <!-- Canvas -->
+          <div class="builder-canvas-container">
+            <div id="emailCanvas" class="builder-canvas">
+              <div class="empty-canvas-msg" id="emptyCanvasMsg" style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:48px 24px">
+                <div style="background:rgba(139,92,246,0.1);color:#8b5cf6;padding:18px;border-radius:50%;display:flex">
+                  <i data-lucide="mail" style="width:36px;height:36px"></i>
+                </div>
+                <p class="dashed-title" style="font-size:1.1rem;margin:0">Ready to Create?</p>
+                <p style="font-size:13px;color:var(--text-muted);text-align:center;max-width:280px;margin:0;line-height:1.6">
+                  Click <strong>New</strong> in the toolbar to start a fresh template, or load an existing one from the Templates tab.
+                </p>
+                <div style="display:flex;gap:10px;margin-top:4px">
+                  <button class="btn btn-sm" onclick="document.getElementById('newTemplateBtn')?.click()" style="background:#8b5cf6;border-color:#8b5cf6;color:#fff;gap:6px;display:flex;align-items:center">
+                    <i data-lucide="file-plus" style="width:14px;height:14px"></i> New Template
+                  </button>
+                  <button class="btn btn-secondary btn-sm" onclick="document.querySelector('[data-tab=templates]')?.click()" style="gap:6px;display:flex;align-items:center">
+                    <i data-lucide="layout-template" style="width:14px;height:14px"></i> Load Template
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Properties Panel -->
+          <aside class="builder-properties" id="propertyPanel">
+            <div class="property-group">
+              <p class="property-title">Properties</p>
+              <p class="property-label" id="noSelectionMsg">Select any block on the canvas.</p>
+            </div>
+            <div id="propertyInputsContainer" style="display:none"></div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- Code export modal -->
+      <div id="codeModal" class="modal-overlay" style="display:none">
+        <div class="modal-card modal-lg">
+          <div class="modal-header">
+            <h2 class="modal-title" id="codeModalTitle">Export</h2>
+            <button class="modal-close" id="closeModalBtn"><i data-lucide="x"></i></button>
+          </div>
+          <div class="modal-body">
+            <textarea id="codeTextarea" class="code-textarea" readonly></textarea>
+            <button class="btn" id="copyCodeBtn" style="margin-top:14px;width:auto">Copy to Clipboard</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ══════════════════ CAMPAIGNS ══════════════════ -->
+    <section id="campaigns" class="page">
+      <div class="page-header">
+        <div>
+          <p class="breadcrumb"><i data-lucide="send" style="width:12px;height:12px"></i>Campaigns</p>
+          <h1 class="page-title">Campaigns</h1>
+          <p class="page-description">Send targeted emails and track performance.</p>
+        </div>
+        <button class="btn" onclick="showCreateCampaignModal()">
+          <i data-lucide="plus"></i>New Campaign
+        </button>
+      </div>
+      <!-- Stats row -->
+      <div class="grid-4" id="campaignStatsRow" style="margin-bottom:20px;display:none"></div>
+      <!-- Campaigns list -->
+      <div id="campaignsList" style="display:flex;flex-direction:column;gap:10px">
+        <div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px">Loading campaigns…</div>
+      </div>
+    </section>
+
+
+    <!-- ══════════════════ A/B TESTS ═══════════════════ -->
+    <section id="abtests" class="page">
+      <div class="page-header">
+        <div>
+          <p class="breadcrumb"><i data-lucide="git-branch" style="width:12px;height:12px"></i>A/B Tests</p>
+          <h1 class="page-title">A/B Tests</h1>
+          <p class="page-description">Compare two campaign variants and pick a winner.</p>
+        </div>
+        <button class="btn" onclick="showCreateABTestModal()">
+          <i data-lucide="plus"></i>New A/B Test
+        </button>
+      </div>
+      <div id="abTestsList" style="display:flex;flex-direction:column;gap:10px">
+        <div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px">Loading A/B tests…</div>
+      </div>
+    </section>
+
+
+    <!-- ══════════════════ ASSETS ════════════════════ -->
+    <section id="assets" class="page">
+      <div class="page-header">
+        <div>
+          <p class="breadcrumb"><i data-lucide="image" style="width:12px;height:12px"></i>Assets</p>
+          <h1 class="page-title">Asset Library</h1>
+          <p class="page-description">Upload and manage images for your emails.</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-secondary" onclick="showGenerateImageModal()" style="display:flex;align-items:center;gap:6px">
+            <i data-lucide="sparkles" style="width:14px;height:14px"></i>AI Generate Image
+          </button>
+          <label class="btn" style="cursor:pointer;display:flex;align-items:center;gap:6px;margin:0">
+            <i data-lucide="upload" style="width:14px;height:14px"></i>Upload Image
+            <input type="file" accept="image/*" style="display:none" onchange="uploadAsset(this)">
+          </label>
+        </div>
+      </div>
+      <div id="assetGrid" class="asset-grid">
+        <div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px;grid-column:1/-1">Loading assets…</div>
+      </div>
+    </section>
+
+
+    <!-- ══════════════════ SETTINGS ═══════════════════ -->
+    <section id="settings" class="page">
+      <div class="page-header">
+        <div>
+          <p class="breadcrumb"><i data-lucide="settings" style="width:12px;height:12px"></i>Settings</p>
+          <h1 class="page-title">Settings</h1>
+          <p class="page-description">Configure email provider, sender details, and API keys.</p>
+        </div>
+      </div>
+
+      <!-- Custom Fields -->
+      <div class="settings-section" style="margin-bottom:16px">
+        <div class="settings-section-header" style="display:flex;justify-content:space-between;align-items:center;flex-direction:row">
+          <div>
+            <p class="settings-section-title">Custom Fields Manager</p>
+            <p class="settings-section-desc">Define fields for personalization, segments, and customer attributes.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="showAddCustomFieldModal()">
+            <i data-lucide="plus"></i>Add Custom Field
+          </button>
+        </div>
+        <div style="overflow:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Label</th><th>System Key</th><th>Data Type</th>
+                <th>Hint</th><th>Mandatory</th><th>Default Value</th>
+                <th>Segment Link</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="customFieldsTableBody">
+              <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px">Loading custom fields…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="customFieldsPagination" class="pagination-container" style="display:none"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- Email Settings -->
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <p class="settings-section-title">Email Settings</p>
+            <p class="settings-section-desc">Configure your email sending provider and identity.</p>
+          </div>
+          <div class="settings-body">
+            <form id="settingsForm" style="display:flex;flex-direction:column;gap:14px">
+              <div class="property-row">
+                <span class="property-label">Provider</span>
+                <select name="provider" class="property-select" onchange="const hint = document.getElementById('sesHintStatic'); if (hint) hint.style.display = this.value === 'ses' ? 'block' : 'none'">
+                  <option value="ses" selected>Amazon SES (Recommended)</option>
+                  <option value="zepto">ZeptoMail</option>
+                  <option value="smtp">SMTP</option>
+                  <option value="sendgrid">SendGrid</option>
+                  <option value="postmark">Postmark</option>
+                  <option value="resend">Resend</option>
+                </select>
+              </div>
+              <div class="property-row">
+                <span class="property-label">Sender Name</span>
+                <input type="text" name="senderName" class="property-input" placeholder="Acme Corp">
+              </div>
+              <div class="property-row">
+                <span class="property-label">Sender Email</span>
+                <input type="email" name="senderEmail" class="property-input" placeholder="noreply@yourdomain.com">
+              </div>
+              <div class="property-row">
+                <span class="property-label">Reply-To</span>
+                <input type="email" name="replyTo" class="property-input" placeholder="support@yourdomain.com">
+              </div>
+              <div class="property-row">
+                <span class="property-label">API Key</span>
+                <input type="password" name="apiKey" class="property-input" placeholder="API Key / Token">
+              </div>
+              <div id="sesHintStatic" style="display:none;font-size:11px;color:var(--text-muted);margin-top:-6px;margin-bottom:10px">
+                * Uses AWS SES credentials configured in your server's <code>.env</code> file.
+              </div>
+              <div style="border-top:1px solid var(--border);padding-top:14px">
+                <p class="property-label" style="margin-bottom:10px;color:var(--accent-purple)">SMTP (if not using Zepto)</p>
+                <div class="property-row" style="margin-bottom:8px">
+                  <span class="property-label">SMTP Host</span>
+                  <input type="text" name="smtpHost" class="property-input" placeholder="smtp.gmail.com">
+                </div>
+                <div class="property-row" style="margin-bottom:8px">
+                  <span class="property-label">SMTP Port</span>
+                  <input type="number" name="smtpPort" class="property-input" placeholder="587">
+                </div>
+                <div class="property-row" style="margin-bottom:8px">
+                  <span class="property-label">SMTP User</span>
+                  <input type="text" name="smtpUser" class="property-input" placeholder="user@gmail.com">
+                </div>
+                <div class="property-row">
+                  <span class="property-label">SMTP Password</span>
+                  <input type="password" name="smtpPass" class="property-input" placeholder="••••••••">
+                </div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button type="submit" class="btn" style="flex:1">Save Settings</button>
+                <button type="button" class="btn btn-secondary" onclick="testSend()" style="flex:1">Send Test Email</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- AI Settings -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <p class="settings-section-title">AI Settings</p>
+              <p class="settings-section-desc">Enable AI email generation and analysis.</p>
+            </div>
+            <div class="settings-body">
+              <p class="property-label" style="line-height:1.6">Add your Gemini API key to enable AI email generation, subject line suggestions, spam checks, and accessibility audits.</p>
+              <div class="property-row">
+                <span class="property-label">Gemini API Key</span>
+                <input type="password" id="geminiKeyInput" class="property-input" placeholder="AIza…">
+              </div>
+              <p class="property-label" style="font-size:10.5px">Get free key at: <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color:var(--accent-purple)">aistudio.google.com</a></p>
+              <button class="btn btn-secondary" style="width:100%" onclick="saveGeminiKey()">Save Gemini Key</button>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <p class="settings-section-title">Zepto Webhook</p>
+              <p class="settings-section-desc">Point your Zepto webhook to track email events.</p>
+            </div>
+            <div class="settings-body">
+              <code id="webhookUrl" style="font-size:12px;color:var(--accent-purple);word-break:break-all;display:block;padding:10px;background:var(--bg-elevated);border-radius:var(--radius-sm);border:1px solid var(--border)">http://your-domain.com/api/campaigns/webhook/zepto</code>
+            </div>
+          </div>
+
+          <!-- System Configuration Status (S3 & AI) -->
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <p class="settings-section-title">System Configurations</p>
+              <p class="settings-section-desc">Environment-level integrations configured in your .env file.</p>
+            </div>
+            <div class="settings-body" id="systemConfigStatus" style="display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-elevated);border-radius:var(--radius-sm);border:1px solid var(--border)">
+                <div>
+                  <span style="font-size:13px;font-weight:600">AWS S3 Storage</span>
+                  <p style="font-size:11px;color:var(--text-muted);margin:2px 0 0 0">Powers robust campaign asset hosting</p>
+                </div>
+                <span id="s3StatusBadge" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:rgba(113, 113, 122, 0.15);color:#71717a">Checking...</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-elevated);border-radius:var(--radius-sm);border:1px solid var(--border)">
+                <div>
+                  <span style="font-size:13px;font-weight:600">Together AI (FLUX)</span>
+                  <p style="font-size:11px;color:var(--text-muted);margin:2px 0 0 0">Powers high-quality image generation</p>
+                </div>
+                <span id="togetherStatusBadge" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:rgba(113, 113, 122, 0.15);color:#71717a">Checking...</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-elevated);border-radius:var(--radius-sm);border:1px solid var(--border)">
+                <div>
+                  <span style="font-size:13px;font-weight:600">Google Gemini</span>
+                  <p style="font-size:11px;color:var(--text-muted);margin:2px 0 0 0">Powers copywriting assistance & audits</p>
+                </div>
+                <span id="geminiStatusBadge" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:rgba(113, 113, 122, 0.15);color:#71717a">Checking...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+    </section>
+
+  </main>
+</div>
+
+<!-- ── Global Modal ────────────────────────────────────────────────── -->
+<div id="modalOverlay" class="modal-overlay" style="display:none">
+  <div class="modal-card" id="modalCard" style="width:520px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modalTitle">Modal</h2>
+      <button class="modal-close" onclick="closeModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" id="modalBody" style="max-height:72vh;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- ── Global Drawer ────────────────────────────────────────────────── -->
+<div id="drawerOverlay" class="drawer-overlay" style="display:none">
+  <div class="drawer-card" id="drawerCard">
+    <div class="drawer-header">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="drawer-back" onclick="closeDrawer()"><i data-lucide="arrow-left"></i></button>
+        <h2 class="drawer-title" id="drawerTitle">Title</h2>
+      </div>
+      <button class="drawer-close" onclick="closeDrawer()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="drawer-content" id="drawerContent" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>
+  </div>
+</div>
+
+<!-- ── Toast Container ─────────────────────────────────────────────── -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="js/app.js?v=16"></script>
+<script src="js/pages.js?v=16"></script>
+<script src="js/builder.js?v=16"></script>
+
+<script>
+  /* ── Toast helper ─────────────────────────────────────────────── */
+  window.showToast = function(title, desc = '', type = 'success') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const icons = {
+      success: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(142 71% 55%)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+      error:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 90% 75%)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+      info:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(199 89% 60%)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    };
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span><div><div class="toast-title">${title}</div>${desc ? `<div class="toast-desc">${desc}</div>` : ''}</div>`;
+    container.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(100%)'; t.style.transition = '0.3s'; setTimeout(() => t.remove(), 300); }, 3500);
+  };
+
+  /* ── Confirm dialog helper ─────────────────────────────────────── */
+  window.showConfirmDialog = function(title, message, isDestructive) {
+    isDestructive = isDestructive !== undefined ? isDestructive : false;
+    return new Promise(function(resolve) {
+      var accentColor = isDestructive ? '#ef4444' : '#2563eb';
+      var bgLight = isDestructive ? 'rgba(239,68,68,0.1)' : 'rgba(37,99,235,0.1)';
+      var iconName = isDestructive ? 'trash-2' : 'help-circle';
+      var overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px)';
+      overlay.innerHTML = '<div style="background:var(--bg-card,#fff);border-radius:16px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center">'+
+        '<div style="display:flex;justify-content:center;margin-bottom:14px"><div style="background:'+bgLight+';color:'+accentColor+';padding:14px;border-radius:50%"><i data-lucide="'+iconName+'" style="width:28px;height:28px"></i></div></div>'+
+        '<h3 style="font-size:1.125rem;font-weight:700;margin:0 0 8px;color:var(--text,#1e293b)">'+title+'</h3>'+
+        '<p style="font-size:0.875rem;color:var(--text-muted,#64748b);margin:0 0 22px;line-height:1.55">'+message+'</p>'+
+        '<div style="display:flex;gap:10px"><button id="_cdCancel" class="btn btn-secondary" style="flex:1">Cancel</button><button id="_cdOk" class="btn" style="flex:1;background:'+accentColor+';border-color:'+accentColor+';color:#fff">'+(isDestructive?'Delete':'Confirm')+'</button></div>'+
+      '</div>';
+      document.body.appendChild(overlay);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      function cleanup(val) {
+        overlay.style.transition='opacity 0.18s';overlay.style.opacity='0';
+        setTimeout(function(){overlay.remove();resolve(val);},180);
+      }
+      overlay.querySelector('#_cdOk').onclick = function(){ cleanup(true); };
+      overlay.querySelector('#_cdCancel').onclick = function(){ cleanup(false); };
+      function escHandler(e){ if(e.key==='Escape'){cleanup(false);document.removeEventListener('keydown',escHandler);} }
+      document.addEventListener('keydown', escHandler);
+    });
+  };
+
+  /* ── Alert dialog helper ────────────────────────────────────────── */
+  window.showAlertDialog = function(title, message, type) {
+    type = type || 'info';
+    return new Promise(function(resolve) {
+      var configs = {
+        success: { color:'#10b981', bg:'rgba(16,185,129,0.1)', icon:'check-circle' },
+        error:   { color:'#ef4444', bg:'rgba(239,68,68,0.1)',  icon:'alert-triangle' },
+        warning: { color:'#f59e0b', bg:'rgba(245,158,11,0.1)', icon:'alert-circle' },
+        info:    { color:'#2563eb', bg:'rgba(37,99,235,0.1)',   icon:'info' }
+      };
+      var cfg = configs[type] || configs.info;
+      var overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px)';
+      overlay.innerHTML = '<div style="background:var(--bg-card,#fff);border-radius:16px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center">'+
+        '<div style="display:flex;justify-content:center;margin-bottom:14px"><div style="background:'+cfg.bg+';color:'+cfg.color+';padding:14px;border-radius:50%"><i data-lucide="'+cfg.icon+'" style="width:28px;height:28px"></i></div></div>'+
+        '<h3 style="font-size:1.125rem;font-weight:700;margin:0 0 8px;color:var(--text,#1e293b)">'+title+'</h3>'+
+        '<p style="font-size:0.875rem;color:var(--text-muted,#64748b);margin:0 0 22px;line-height:1.55">'+message+'</p>'+
+        '<button id="_adOk" class="btn" style="width:100%;background:'+cfg.color+';border-color:'+cfg.color+';color:#fff">OK</button>'+
+      '</div>';
+      document.body.appendChild(overlay);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      function cleanup() {
+        overlay.style.transition='opacity 0.18s';overlay.style.opacity='0';
+        setTimeout(function(){overlay.remove();resolve();},180);
+      }
+      overlay.querySelector('#_adOk').onclick = cleanup;
+      function kHandler(e){ if(e.key==='Escape'||e.key==='Enter'){cleanup();document.removeEventListener('keydown',kHandler);} }
+      document.addEventListener('keydown', kHandler);
+    });
+  };
+
+  /* ── Prompt dialog helper ────────────────────────────────────────── */
+  window.showPromptDialog = function(title, message, defaultValue) {
+    defaultValue = defaultValue || '';
+    return new Promise(function(resolve) {
+      var overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px)';
+      overlay.innerHTML = '<div style="background:var(--bg-card,#fff);border-radius:16px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:left">'+
+        '<h3 style="font-size:1.125rem;font-weight:700;margin:0 0 8px;color:var(--text,#1e293b)">'+title+'</h3>'+
+        '<p style="font-size:0.875rem;color:var(--text-muted,#64748b);margin:0 0 14px;line-height:1.55">'+message+'</p>'+
+        '<input id="_pdInput" class="property-input" style="width:100%;margin-bottom:20px;box-sizing:border-box" value="'+defaultValue+'" autocomplete="off">'+
+        '<div style="display:flex;gap:10px"><button id="_pdCancel" class="btn btn-secondary" style="flex:1">Cancel</button><button id="_pdOk" class="btn" style="flex:1;background:#2563eb;border-color:#2563eb;color:#fff">Submit</button></div>'+
+      '</div>';
+      document.body.appendChild(overlay);
+      var input = overlay.querySelector('#_pdInput');
+      input.focus();
+      input.select();
+      function cleanup(val) {
+        overlay.style.transition='opacity 0.18s';overlay.style.opacity='0';
+        setTimeout(function(){overlay.remove();resolve(val);},180);
+      }
+      overlay.querySelector('#_pdOk').onclick = function() { cleanup(input.value); };
+      overlay.querySelector('#_pdCancel').onclick = function() { cleanup(null); };
+      input.onkeydown = function(e) {
+        if (e.key === 'Enter') { cleanup(input.value); }
+        else if (e.key === 'Escape') { cleanup(null); }
+      };
+    });
+  };
+
+  /* ── Reinitialize lucide on page transitions ──────────────────── */
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+</script>
+</body>
+</html>

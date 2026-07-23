@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account — MailFlow</title>
+  <meta name="description" content="Set up your MailFlow organization with your team, customers, and email campaigns in minutes.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%237c5dbb'/><path d='M6 10l10 8 10-8' stroke='white' stroke-width='2' fill='none'/><rect x='6' y='10' width='20' height='14' rx='2' stroke='white' stroke-width='2' fill='none'/></svg>">
+  <link rel="stylesheet" href="auth.css?v=3">
+  
+  <style>
+    /* ── OWNREWARDS DESIGN LAYOUT OVERRIDES ── */
+    :root {
+      --own-purple: #2563eb;
+      --own-purple-hover: #1d4ed8;
+      --own-purple-light: #dbeafe;
+      --own-bg: #f0f4f8;
+      --own-card-bg: #ffffff;
+      --own-border: #e2e8f0;
+      --own-text: #1e293b;
+      --own-muted: #64748b;
+      --own-input-bg: #f8fafc;
+      --own-radius: 12px;
+      --own-radius-sm: 8px;
+    }
+
+    body {
+      background-color: var(--own-bg);
+      color: var(--own-text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    /* Signup Card Main Wrapper */
+    .signup-container {
+      display: flex;
+      width: 100%;
+      max-width: 1040px;
+      background: var(--own-card-bg);
+      border-radius: 20px;
+      box-shadow: 0 15px 40px rgba(37, 99, 235, 0.10);
+      overflow: hidden;
+      min-height: 640px;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Sidebar Column */
+    .signup-sidebar {
+      width: 320px;
+      background: #ffffff;
+      border-right: 1px solid var(--own-border);
+      padding: 40px 30px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: var(--own-text);
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .signup-sidebar::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: none;
+      pointer-events: none;
+    }
+
+    /* Sidebar Logo */
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 50px;
+    }
+    
+    .sidebar-logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--own-purple);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+    }
+    .sidebar-logo-icon svg {
+      color: #ffffff;
+    }
+    
+    .sidebar-logo-text {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    /* Sidebar Steps Timeline */
+    .sidebar-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0px;
+      position: relative;
+      flex: 1;
+    }
+
+    /* Vertical connector line */
+    .sidebar-steps::before {
+      content: '';
+      position: absolute;
+      left: 20px;
+      top: 25px;
+      bottom: 25px;
+      width: 2px;
+      background: #e2e8f0;
+      z-index: 0;
+    }
+
+    .sidebar-step {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 10px;
+      border-radius: var(--own-radius);
+      margin-bottom: 12px;
+      position: relative;
+      z-index: 1;
+      cursor: default;
+      transition: all 0.25s ease;
+      color: var(--own-muted);
+    }
+
+    .sidebar-step-circle {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid #cbd5e1;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      color: var(--own-muted);
+      transition: all 0.25s;
+    }
+
+    .sidebar-step-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      transition: all 0.25s;
+    }
+
+    /* Active Step Styling */
+    .sidebar-step.active {
+      background: var(--own-purple-light);
+      color: var(--own-purple);
+      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.10);
+    }
+    .sidebar-step.active .sidebar-step-circle {
+      background: var(--own-purple);
+      border-color: var(--own-purple);
+      color: #ffffff;
+    }
+    
+    /* Done Steps Styling */
+    .sidebar-step.done {
+      color: var(--own-purple);
+    }
+    .sidebar-step.done .sidebar-step-circle {
+      background: var(--own-purple-light);
+      border-color: var(--own-purple);
+      color: var(--own-purple);
+    }
+
+    /* Sidebar Footer */
+    .sidebar-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 40px;
+    }
+
+    .sidebar-logout {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1px solid var(--own-border);
+      color: var(--own-text);
+      padding: 8px 16px;
+      border-radius: var(--own-radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      width: fit-content;
+      transition: all 0.2s;
+    }
+    .sidebar-logout:hover {
+      background: #f1f5f9;
+      border-color: var(--own-purple);
+      color: var(--own-purple);
+    }
+
+    .sidebar-copyright {
+      font-size: 0.7rem;
+      color: var(--own-muted);
+      font-weight: 500;
+    }
+
+    /* Right Form Area */
+    .signup-content {
+      flex: 1;
+      padding: 40px 50px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow-y: auto;
+    }
+
+    .content-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+
+    .content-step-indicator {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--own-muted);
+    }
+
+    .content-title {
+      font-size: 1.625rem;
+      font-weight: 800;
+      color: var(--own-text);
+      margin: 0 0 6px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .content-subtitle {
+      font-size: 0.875rem;
+      color: var(--own-muted);
+      margin: 0 0 28px 0;
+    }
+
+    /* Grid layout matching screenshot */
+    .own-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* Polished Form Inputs */
+    .own-field {
+      margin-bottom: 18px;
+    }
+
+    .own-label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--own-text);
+      margin-bottom: 6px;
+    }
+    .own-label .required {
+      color: var(--auth-error);
+      margin-left: 2px;
+    }
+
+    .own-input-wrap {
+      position: relative;
+    }
+
+    .own-input {
+      width: 100%;
+      height: 44px;
+      background: var(--own-input-bg);
+      border: 1px solid var(--own-border);
+      border-radius: var(--own-radius-sm);
+      padding: 0 14px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      color: var(--own-text);
+      outline: none;
+      transition: all 0.2s;
+      cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2716%27%20height%3D%2716%27%20viewBox%3D%270%200%2016%2016%27%3E%3Cpath%20d%3D%27M4%201h8v1H8.5v12H12v1H4v-1h3.5V2H4V1z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E") 8 8, text;
+    }
+    .own-input::placeholder {
+      color: #94a3b8;
+      transition: color 0.15s ease;
+    }
+    .own-input:focus::placeholder {
+      color: transparent !important;
+    }
+    .own-input:hover {
+      border-color: #000000;
+      cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2716%27%20height%3D%2716%27%20viewBox%3D%270%200%2016%2016%27%3E%3Cpath%20d%3D%27M4%201h8v1H8.5v12H12v1H4v-1h3.5V2H4V1z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E") 8 8, text;
+    }
+    .own-input:focus {
+      border-color: var(--own-purple);
+      background: white;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2716%27%20height%3D%2716%27%20viewBox%3D%270%200%2016%2016%27%3E%3Cpath%20d%3D%27M4%201h8v1H8.5v12H12v1H4v-1h3.5V2H4V1z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E") 8 8, text;
+    }
+
+    .country-select:hover {
+      border-color: #000000;
+    }
+
+    /* Password strength checklist */
+    .pw-checklist {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      margin-top: 10px;
+      margin-bottom: 4px;
+    }
+    .pw-check-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      transition: color 0.2s;
+    }
+    .pw-check-item.pass {
+      color: #16a34a;
+    }
+    .pw-check-item .pw-icon {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1.5px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .pw-check-item.pass .pw-icon {
+      background: #16a34a;
+      border-color: #16a34a;
+    }
+    .pw-check-item.pass .pw-icon svg {
+      display: block;
+    }
+    .pw-check-item .pw-icon svg {
+      display: none;
+      width: 8px;
+      height: 8px;
+    }
+
+    /* Modal Overlay */
+    .policy-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      animation: modalFadeIn 0.2s ease;
+    }
+    .policy-modal-overlay.active {
+      display: flex;
+    }
+    .policy-modal {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 520px;
+      max-height: 80vh;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      animation: modalSlideIn 0.25s cubic-bezier(0.16,1,0.3,1);
+    }
+    .policy-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .policy-modal-header h3 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0;
+    }
+    .policy-modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: #f1f5f9;
+      color: #64748b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .policy-modal-close:hover {
+      background: #fee2e2;
+      color: #ef4444;
+    }
+    .policy-modal-body {
+      padding: 20px 24px 24px;
+      overflow-y: auto;
+      font-size: 0.8125rem;
+      color: #475569;
+      line-height: 1.7;
+    }
+    .policy-modal-body h4 {
+      color: #1e293b;
+      font-size: 0.875rem;
+      margin: 16px 0 8px;
+    }
+    .policy-modal-body h4:first-child {
+      margin-top: 0;
+    }
+    .policy-modal-body ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    .policy-modal-body li {
+      margin-bottom: 4px;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; } to { opacity: 1; }
+    }
+    @keyframes modalSlideIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Password Input specifics */
+    .own-input-pw {
+      padding-right: 40px;
+    }
+    
+    .own-pw-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #94a3b8;
+      padding: 2px;
+      display: flex;
+      align-items: center;
+    }
+    .own-pw-toggle:hover {
+      color: var(--own-purple);
+    }
+    .own-pw-toggle svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Country Phone Dropdown flex wrapper */
+    .phone-flex {
+      display: flex;
+      gap: 8px;
+    }
+
+    .country-select {
+      width: 90px;
+      height: 44px;
+      background: var(--own-input-bg);
+      border: 1px solid var(--own-border);
+      border-radius: var(--own-radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--own-text);
+      padding: 0 8px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23857fa2' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 24px;
+    }
+    .country-select:focus {
+      border-color: var(--own-purple);
+    }
+
+    .phone-hint {
+      font-size: 0.75rem;
+      color: var(--own-purple);
+      margin-top: 6px;
+      font-weight: 500;
+    }
+
+    /* Form Footer */
+    .own-form-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid var(--own-border);
+    }
+
+    .own-required-text {
+      font-size: 0.8125rem;
+      color: var(--own-muted);
+      font-weight: 500;
+    }
+
+    /* Save and Continue Button */
+    .own-btn-save {
+      background: var(--own-purple);
+      color: white;
+      border: none;
+      border-radius: var(--own-radius-sm);
+      height: 40px;
+      padding: 0 24px;
+      font-size: 0.875rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.20);
+    }
+    .own-btn-save:hover {
+      background: var(--own-purple-hover);
+      transform: translateY(-1px);
+    }
+    .own-btn-save:active {
+      transform: translateY(0);
+    }
+    .own-btn-save:disabled {
+      background: #dfdbf0;
+      color: #9f9abc;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Brand Panel Features inside done step */
+    .own-success-card {
+      background: #f7f6fd;
+      border: 1px solid var(--own-border);
+      border-radius: var(--own-radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: all 0.18s;
+    }
+    .own-success-card:hover {
+      border-color: var(--own-purple);
+      background: white;
+      box-shadow: 0 4px 12px rgba(124, 93, 219, 0.05);
+    }
+
+    /* Step transitions animation */
+    .own-fade {
+      animation: ownFadeSlide 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    @keyframes ownFadeSlide {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Logo Upload Dropzone override */
+    .own-logo-dropzone {
+      border: 2px dashed var(--own-border);
+      border-radius: var(--own-radius);
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      background: var(--own-input-bg);
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .own-logo-dropzone:hover {
+      border-color: var(--own-purple);
+      background: #fdfdfd;
+    }
+    .own-logo-dropzone.has-logo {
+      border-style: solid;
+      border-color: var(--own-purple);
+      background: #fbfbfe;
+    }
+    .own-logo-icon {
+      color: var(--own-muted);
+    }
+    .own-logo-icon svg {
+      width: 32px;
+      height: 32px;
+    }
+    .own-logo-preview {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: var(--own-radius-sm);
+      border: 2px solid var(--own-border);
+    }
+
+    /* Branch Location Cards */
+    .branch-list-card {
+      border: 1px solid var(--own-border);
+      border-radius: var(--own-radius-sm);
+      background: var(--own-input-bg);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .branch-list-card-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .branch-list-card-name {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--own-text);
+    }
+    .branch-list-card-loc {
+      font-size: 0.75rem;
+      color: var(--own-muted);
+    }
+    
+    .branch-list-remove {
+      background: transparent;
+      border: none;
+      color: var(--own-muted);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .branch-list-remove:hover {
+      background: #fee2e2;
+      color: #ef4444;
+    }
+
+    /* Mobile responsiveness settings */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      .signup-container {
+        flex-direction: column;
+        min-height: auto;
+      }
+      .signup-sidebar {
+        width: auto;
+        border-radius: 20px 20px 0 0;
+        padding: 24px;
+      }
+      .sidebar-steps {
+        flex-direction: row;
+        gap: 6px;
+        overflow-x: auto;
+        margin-bottom: 20px;
+      }
+      .sidebar-steps::before {
+        display: none;
+      }
+      .sidebar-step {
+        margin-bottom: 0;
+        padding: 6px 12px;
+        white-space: nowrap;
+      }
+      .sidebar-logo {
+        margin-bottom: 24px;
+      }
+      .sidebar-footer {
+        display: none;
+      }
+      .signup-content {
+        padding: 24px;
+      }
+      .own-grid-2 {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="signup-container">
+
+  <!-- ── Left Sidebar (Step indicators) ── -->
+  <aside class="signup-sidebar">
+    <div>
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <span class="sidebar-logo-text">MailFlow</span>
+      </div>
+
+      <div class="sidebar-steps">
+        <div class="sidebar-step active" id="si1">
+          <div class="sidebar-step-circle">1</div>
+          <span class="sidebar-step-label">Personal Details</span>
+        </div>
+        <div class="sidebar-step" id="si2">
+          <div class="sidebar-step-circle">2</div>
+          <span class="sidebar-step-label">Setup Your Organization</span>
+        </div>
+        <div class="sidebar-step" id="si3">
+          <div class="sidebar-step-circle">3</div>
+          <span class="sidebar-step-label">Setup Branches</span>
+        </div>
+        <div class="sidebar-step" id="si4">
+          <div class="sidebar-step-circle">4</div>
+          <span class="sidebar-step-label">Integration & Done</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="sidebar-logout" onclick="window.location.href='/login'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+        </svg>
+        Logout
+      </button>
+      <div class="sidebar-copyright">All rights reserved @ MailFlow</div>
+    </div>
+  </aside>
+
+  <!-- ── Right Content Area ── -->
+  <div class="signup-content">
+
+    <!-- Global alert -->
+    <div id="globalError" class="shad-alert shad-alert-error" style="display:none; margin-bottom: 20px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="globalErrorText"></span>
+    </div>
+
+    <!-- ══════════ STEP 1: PERSONAL DETAILS ══════════ -->
+    <div id="step1" class="own-fade">
+      <div class="content-header">
+        <div>
+          <h2 class="content-title">Hi! Let's Get to Know You!</h2>
+          <p class="content-subtitle">Just a few details to set up your account.</p>
+        </div>
+        <div class="content-step-indicator">Step 1 / 4</div>
+      </div>
+
+      <div class="own-grid-2">
+        <div class="own-field">
+          <label class="own-label" for="firstName">First Name <span class="required">*</span></label>
+          <div class="own-input-wrap">
+            <input type="text" id="firstName" class="own-input" placeholder="Enter your first name">
+          </div>
+        </div>
+        <div class="own-field">
+          <label class="own-label" for="lastName">Last Name</label>
+          <div class="own-input-wrap">
+            <input type="text" id="lastName" class="own-input" placeholder="Enter your last name">
+          </div>
+        </div>
+      </div>
+
+      <div class="own-field">
+        <label class="own-label" for="email">Email <span class="required">*</span></label>
+        <div class="own-input-wrap">
+          <input type="email" id="email" class="own-input" placeholder="Enter your email">
+        </div>
+      </div>
+
+      <div class="own-field">
+        <label class="own-label" for="phone">Phone Number <span class="required">*</span></label>
+        <div class="phone-flex">
+          <select id="countryCode" class="country-select">
+            <option value="+91">IN +91</option>
+            <option value="+1">US +1</option>
+            <option value="+44">UK +44</option>
+            <option value="+971">AE +971</option>
+            <option value="+65">SG +65</option>
+            <option value="+61">AU +61</option>
+          </select>
+          <input type="tel" id="phone" class="own-input" placeholder="Enter phone number">
+        </div>
+        <p class="phone-hint">Enter 10 digits for selected country</p>
+      </div>
+
+      <div class="own-grid-2">
+        <div class="own-field">
+          <label class="own-label" for="password">Password <span class="required">*</span></label>
+          <div class="own-input-wrap">
+            <input type="password" id="password" class="own-input own-input-pw" placeholder="Enter your password" oninput="validatePasswordCriteria()">
+            <button type="button" class="own-pw-toggle" onclick="togglePw('password')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="own-field">
+          <label class="own-label" for="confirmPw">Confirm Password <span class="required">*</span></label>
+          <div class="own-input-wrap">
+            <input type="password" id="confirmPw" class="own-input own-input-pw" placeholder="Confirm your password">
+            <button type="button" class="own-pw-toggle" onclick="togglePw('confirmPw')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Password Security Checklist -->
+      <div class="pw-checklist" id="pwChecklist">
+        <div class="pw-check-item" id="pwLen">
+          <span class="pw-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+          Min 8 characters
+        </div>
+        <div class="pw-check-item" id="pwUpper">
+          <span class="pw-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+          Uppercase letter
+        </div>
+        <div class="pw-check-item" id="pwLower">
+          <span class="pw-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+          Lowercase letter
+        </div>
+        <div class="pw-check-item" id="pwNum">
+          <span class="pw-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+          Number
+        </div>
+        <div class="pw-check-item" id="pwSpecial">
+          <span class="pw-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+          Special character
+        </div>
+      </div>
+
+      <div class="shad-check-row" style="margin-bottom:20px">
+        <input type="checkbox" id="terms" style="accent-color: var(--own-purple)">
+        <label class="shad-check-label" for="terms">
+          I agree to the <a href="#" style="color:var(--own-purple)" onclick="event.preventDefault(); openPolicyModal('tos')">Terms of Service</a> and <a href="#" style="color:var(--own-purple)" onclick="event.preventDefault(); openPolicyModal('privacy')">Privacy Policy</a>
+        </label>
+      </div>
+
+      <div class="own-form-footer">
+        <span class="own-required-text">* Required</span>
+        <button class="own-btn-save" onclick="goStep2()">
+          Save and Continue
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="13" height="13">
+            <path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════════ STEP 2: SETUP YOUR ORGANIZATION ══════════ -->
+    <div id="step2" style="display:none" class="own-fade">
+      <div class="content-header">
+        <div>
+          <h2 class="content-title">Setup Your Organization</h2>
+          <p class="content-subtitle">Tell us about your organization — name, logo, industry and HQ.</p>
+        </div>
+        <div class="content-step-indicator">Step 2 / 4</div>
+      </div>
+
+      <!-- Logo Upload Zone -->
+      <div class="own-field">
+        <label class="own-label">Organization Logo</label>
+        <div class="own-logo-dropzone" id="logoZone" onclick="document.getElementById('logoFile').click()">
+          <div class="own-logo-icon" id="logoIcon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="3"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </div>
+          <img id="logoPreview" class="own-logo-preview" style="display:none" alt="Logo preview">
+          <p class="logo-upload-title" id="logoTitle" style="font-size:0.8125rem; font-weight:700; margin: 4px 0 0 0;">Click to upload logo</p>
+          <p class="logo-upload-sub" id="logoSub" style="font-size:0.75rem; color:var(--own-muted); margin:0;">PNG, JPG up to 2MB</p>
+        </div>
+        <input type="file" id="logoFile" accept="image/*" style="display:none" onchange="previewLogo(this)">
+      </div>
+
+      <div class="own-field">
+        <label class="own-label" for="orgName">Organization Name <span class="required">*</span></label>
+        <div class="own-input-wrap">
+          <input type="text" id="orgName" class="own-input" placeholder="Enter organization name">
+        </div>
+      </div>
+
+      <div class="own-grid-2">
+        <div class="own-field">
+          <label class="own-label" for="industry">Industry</label>
+          <select id="industry" class="country-select" style="width:100%; font-weight:normal;">
+            <option value="">Select industry…</option>
+            <option>Technology</option>
+            <option>E-commerce</option>
+            <option>Healthcare</option>
+            <option>Education</option>
+            <option>Finance</option>
+            <option>Retail</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="own-field">
+          <label class="own-label" for="website">Website</label>
+          <div class="own-input-wrap">
+            <input type="url" id="website" class="own-input" placeholder="https://company.com">
+          </div>
+        </div>
+      </div>
+
+      <!-- HQ details -->
+      <div style="background:#f7f6fd; border:1px solid var(--own-border); border-radius:var(--own-radius); padding:16px; margin-bottom:18px;">
+        <p style="font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:var(--own-purple); margin:0 0 12px 0;">
+          Headquarters Location
+        </p>
+        <div class="own-grid-2">
+          <div class="own-field">
+            <label class="own-label">City <span class="required">*</span></label>
+            <input type="text" id="hqCity" class="own-input" placeholder="HQ City">
+          </div>
+          <div class="own-field">
+            <label class="own-label">State / Province</label>
+            <select id="hqState" class="country-select" style="width:100%; font-weight:normal;">
+              <option value="">Select state…</option>
+            </select>
+          </div>
+        </div>
+        <div class="own-grid-2">
+          <div class="own-field" style="margin-bottom:0;">
+            <label class="own-label">Country <span class="required">*</span></label>
+            <select id="hqCountry" class="country-select" style="width:100%; font-weight:normal;">
+              <option value="">Loading countries…</option>
+            </select>
+          </div>
+          <div class="own-field" style="margin-bottom:0;">
+            <label class="own-label">Postal Code</label>
+            <input type="text" id="hqZip" class="own-input" placeholder="HQ Postal Code">
+          </div>
+        </div>
+        <div class="own-field" style="margin-top:12px; margin-bottom:0;">
+          <label class="own-label">Full Address</label>
+          <input type="text" id="hqAddress" class="own-input" placeholder="Street address, building...">
+        </div>
+      </div>
+
+      <div class="own-form-footer">
+        <span class="own-required-text">* Required</span>
+        <div style="display:flex; gap:10px;">
+          <button class="own-btn-save" style="background:#e0dbf0; color:var(--own-purple); box-shadow:none;" onclick="goStep1()">Back</button>
+          <button class="own-btn-save" onclick="goStep3()">Save and Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ STEP 3: SETUP BRANCHES ══════════ -->
+    <div id="step3" style="display:none" class="own-fade">
+      <div class="content-header">
+        <div>
+          <h2 class="content-title">Setup Branches</h2>
+          <p class="content-subtitle">Add other branches or offices. You can skip this and add them later in settings.</p>
+        </div>
+        <div class="content-step-indicator">Step 3 / 4</div>
+      </div>
+
+      <!-- Add branch box -->
+      <div style="background:#f7f6fd; border:1px solid var(--own-border); border-radius:var(--own-radius); padding:16px; margin-bottom:18px;">
+        <p style="font-size:0.75rem; font-weight:800; color:var(--own-purple); text-transform:uppercase; margin:0 0 12px 0;">Add a Branch Office</p>
+        <div class="own-grid-2">
+          <div class="own-field">
+            <label class="own-label">Branch Name <span class="required">*</span></label>
+            <input type="text" id="branchName" class="own-input" placeholder="e.g. South Office">
+          </div>
+          <div class="own-field">
+            <label class="own-label">Location / City <span class="required">*</span></label>
+            <input type="text" id="branchLocation" class="own-input" placeholder="e.g. Chennai">
+          </div>
+        </div>
+        <div class="own-field" style="margin-bottom:12px;">
+          <label class="own-label">Address (optional)</label>
+          <input type="text" id="branchAddress" class="own-input" placeholder="Branch street address">
+        </div>
+        <button class="own-btn-save" style="height:36px; padding:0 16px; font-size:0.8125rem;" onclick="addBranch()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="12" height="12">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Add Branch
+        </button>
+      </div>
+
+      <!-- Rendered list of branches -->
+      <div id="branchList" style="margin-bottom:20px;">
+        <div class="empty-branches" id="emptyBranches" style="text-align:center; padding:20px; font-size:0.8125rem; color:var(--own-muted); border:1px dashed var(--own-border); border-radius:var(--own-radius-sm);">
+          No branch offices added yet.
+        </div>
+      </div>
+
+      <div class="own-form-footer">
+        <span class="own-required-text">* Required</span>
+        <div style="display:flex; gap:10px;">
+          <button class="own-btn-save" style="background:#e0dbf0; color:var(--own-purple); box-shadow:none;" onclick="goStep2()">Back</button>
+          <button class="own-btn-save" id="submitBtn" onclick="submitSignup()">Create Organization & Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ STEP 4: INTEGRATION & DONE ══════════ -->
+    <div id="step4" style="display:none" class="own-fade">
+      <div class="content-header">
+        <div>
+          <h2 class="content-title">Integration & Done</h2>
+          <p class="content-subtitle">Your organization workspace is created successfully! Let's get started.</p>
+        </div>
+        <div class="content-step-indicator">Step 4 / 4</div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:30px;">
+        <div class="own-success-card">
+          <div style="width:38px; height:38px; background:rgba(124, 93, 219, 0.1); color:var(--own-purple); border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+          <div>
+            <h4 style="margin:0 0 2px 0; font-size:0.875rem; font-weight:700;">Add customers</h4>
+            <p style="margin:0; font-size:0.75rem; color:var(--own-muted);">Import contacts via CSV upload or manual creation</p>
+          </div>
+        </div>
+        <div class="own-success-card">
+          <div style="width:38px; height:38px; background:rgba(124, 93, 219, 0.1); color:var(--own-purple); border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          </div>
+          <div>
+            <h4 style="margin:0 0 2px 0; font-size:0.875rem; font-weight:700;">Group into segments</h4>
+            <p style="margin:0; font-size:0.75rem; color:var(--own-muted);">Segment your customers dynamically using filters and rules</p>
+          </div>
+        </div>
+        <div class="own-success-card">
+          <div style="width:38px; height:38px; background:rgba(124, 93, 219, 0.1); color:var(--own-purple); border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div>
+            <h4 style="margin:0 0 2px 0; font-size:0.875rem; font-weight:700;">Launch email campaigns</h4>
+            <p style="margin:0; font-size:0.75rem; color:var(--own-muted);">Create template designs and send out to your target groups</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="own-form-footer" style="justify-content:flex-end;">
+        <button class="own-btn-save" onclick="window.location.href='/dashboard'">
+          Go to Dashboard
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="13" height="13">
+            <path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ══════════ POLICY MODALS ══════════ -->
+<div class="policy-modal-overlay" id="policyModalOverlay" onclick="closePolicyModal(event)">
+  <div class="policy-modal" onclick="event.stopPropagation()">
+    <div class="policy-modal-header">
+      <h3 id="policyModalTitle">Terms of Service</h3>
+      <button class="policy-modal-close" onclick="closePolicyModal()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="policy-modal-body" id="policyModalBody"></div>
+  </div>
+</div>
+
+<script>
+  // State
+  let _step = 1;
+  const _branches = [];
+  let _logoData = null;
+
+  // ── Policy Modal Content ─────────────────────────────────────
+  const policyContent = {
+    tos: `
+      <h4>1. Acceptance of Terms</h4>
+      <p>By creating an account and using the MailFlow platform, you agree to be bound by these Terms of Service. If you do not agree with any part of these terms, you may not access the service.</p>
+      <h4>2. Account Responsibilities</h4>
+      <ul>
+        <li>You must provide accurate, current, and complete information during registration.</li>
+        <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
+        <li>You must notify us immediately of any unauthorized use of your account.</li>
+      </ul>
+      <h4>3. Acceptable Use</h4>
+      <ul>
+        <li>You may not use MailFlow to send unsolicited or spam emails.</li>
+        <li>All email campaigns must comply with applicable anti-spam laws (CAN-SPAM, GDPR, etc.).</li>
+        <li>You must include a working unsubscribe link in all marketing emails.</li>
+      </ul>
+      <h4>4. Data Ownership</h4>
+      <p>You retain ownership of all customer data and email content you upload. MailFlow will not share, sell, or use your data for purposes other than providing the service.</p>
+      <h4>5. Service Availability</h4>
+      <p>We strive for 99.9% uptime but do not guarantee uninterrupted access. Scheduled maintenance will be communicated in advance.</p>
+      <h4>6. Termination</h4>
+      <p>We reserve the right to suspend or terminate accounts that violate these terms. You may delete your account at any time from the account settings page.</p>
+    `,
+    privacy: `
+      <h4>1. Information We Collect</h4>
+      <ul>
+        <li><strong>Account Data:</strong> Name, email address, phone number, and organization details you provide during registration.</li>
+        <li><strong>Usage Data:</strong> Login timestamps, feature usage patterns, and campaign performance metrics.</li>
+        <li><strong>Customer Data:</strong> Contact information you upload for email campaign recipients.</li>
+      </ul>
+      <h4>2. How We Use Your Information</h4>
+      <ul>
+        <li>To provide, operate, and maintain the MailFlow platform.</li>
+        <li>To process and deliver your email campaigns.</li>
+        <li>To send you service-related notifications and updates.</li>
+        <li>To improve our services through aggregated, anonymized analytics.</li>
+      </ul>
+      <h4>3. Data Protection</h4>
+      <p>We implement industry-standard security measures including encryption in transit (TLS) and at rest (AES-256). Access to personal data is restricted to authorized personnel only.</p>
+      <h4>4. Third-Party Sharing</h4>
+      <p>We do not sell your personal information. We may share data only with service providers necessary for platform operations (e.g., email delivery infrastructure), under strict data processing agreements.</p>
+      <h4>5. Your Rights</h4>
+      <ul>
+        <li>Access, correct, or delete your personal data at any time.</li>
+        <li>Export your data in a portable format.</li>
+        <li>Opt out of non-essential communications.</li>
+      </ul>
+      <h4>6. Contact Us</h4>
+      <p>For privacy-related inquiries, contact us at <strong>privacy@mailflow.com</strong>.</p>
+    `
+  };
+
+  function openPolicyModal(type) {
+    const overlay = document.getElementById('policyModalOverlay');
+    document.getElementById('policyModalTitle').textContent = type === 'tos' ? 'Terms of Service' : 'Privacy Policy';
+    document.getElementById('policyModalBody').innerHTML = policyContent[type];
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePolicyModal(e) {
+    if (e && e.target !== e.currentTarget) return;
+    document.getElementById('policyModalOverlay').classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  // ── Password Security Checklist ──────────────────────────────
+  function validatePasswordCriteria() {
+    const pw = document.getElementById('password').value;
+    const checks = [
+      { id: 'pwLen',     test: pw.length >= 8 },
+      { id: 'pwUpper',   test: /[A-Z]/.test(pw) },
+      { id: 'pwLower',   test: /[a-z]/.test(pw) },
+      { id: 'pwNum',     test: /[0-9]/.test(pw) },
+      { id: 'pwSpecial', test: /[^A-Za-z0-9]/.test(pw) },
+    ];
+    checks.forEach(c => {
+      const el = document.getElementById(c.id);
+      if (c.test) el.classList.add('pass');
+      else el.classList.remove('pass');
+    });
+  }
+
+  function isPasswordSecure() {
+    const pw = document.getElementById('password').value;
+    return pw.length >= 8 && /[A-Z]/.test(pw) && /[a-z]/.test(pw) && /[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
+  }
+
+  // Step transitions
+  function showStep(n) {
+    [1,2,3,4].forEach(i => {
+      const el = document.getElementById('step' + i);
+      if (el) el.style.display = (i === n) ? 'block' : 'none';
+      
+      const si = document.getElementById('si' + i);
+      if (si) {
+        si.classList.remove('active', 'done');
+        if (i < n) si.classList.add('done');
+        else if (i === n) si.classList.add('active');
+      }
+    });
+    _step = n;
+
+    // Load countries when entering step 2
+    if (n === 2) loadCountries();
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('globalError');
+    document.getElementById('globalErrorText').textContent = msg;
+    el.style.display = 'flex';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function hideError() { document.getElementById('globalError').style.display = 'none'; }
+
+  function togglePw(id) {
+    const inp = document.getElementById(id);
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  // Logo Preview
+  function previewLogo(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      _logoData = e.target.result;
+      document.getElementById('logoPreview').src = _logoData;
+      document.getElementById('logoPreview').style.display = 'block';
+      document.getElementById('logoIcon').style.display = 'none';
+      document.getElementById('logoTitle').textContent = file.name;
+      document.getElementById('logoSub').textContent = (file.size / 1024).toFixed(0) + ' KB';
+      document.getElementById('logoZone').classList.add('has-logo');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── Country / State Dynamic Loading ──────────────────────────
+  let _countriesLoaded = false;
+
+  async function loadCountries() {
+    if (_countriesLoaded) return;
+    try {
+      const res = await fetch('/api/countries');
+      const countries = await res.json();
+      
+      // Populate step 2 country
+      const sel = document.getElementById('hqCountry');
+      if (sel) {
+        sel.innerHTML = '<option value="">Select country…</option>';
+        countries.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.code;
+          opt.textContent = c.name;
+          if (c.code === 'IN') opt.selected = true;
+          sel.appendChild(opt);
+        });
+      }
+
+      // Populate step 1 phone country code selector
+      const phoneSel = document.getElementById('countryCode');
+      if (phoneSel) {
+        phoneSel.innerHTML = '';
+        countries.forEach(c => {
+          if (c.phonecode) {
+            const opt = document.createElement('option');
+            const cleanCode = '+' + c.phonecode.replace(/^\+/, '');
+            opt.value = cleanCode;
+            opt.textContent = `${c.code} ${cleanCode}`;
+            if (c.code === 'IN') opt.selected = true;
+            phoneSel.appendChild(opt);
+          }
+        });
+      }
+
+      _countriesLoaded = true;
+      // Load states for default selection
+      if (sel && sel.value) loadStates(sel.value);
+    } catch (err) {
+      console.error('Failed to load countries:', err);
+    }
+  }
+
+  async function loadStates(countryCode) {
+    const sel = document.getElementById('hqState');
+    sel.innerHTML = '<option value="">Loading…</option>';
+    try {
+      const res = await fetch('/api/states/' + countryCode);
+      const states = await res.json();
+      sel.innerHTML = '<option value="">Select state…</option>';
+      if (states.length === 0) {
+        sel.innerHTML = '<option value="">No states available</option>';
+      } else {
+        states.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.code;
+          opt.textContent = s.name;
+          sel.appendChild(opt);
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load states:', err);
+      sel.innerHTML = '<option value="">Failed to load</option>';
+    }
+  }
+
+  // Country change event
+  document.getElementById('hqCountry').addEventListener('change', function() {
+    if (this.value) loadStates(this.value);
+    else document.getElementById('hqState').innerHTML = '<option value="">Select state…</option>';
+  });
+
+  // Add Branch
+  function addBranch() {
+    const name = document.getElementById('branchName').value.trim();
+    const location = document.getElementById('branchLocation').value.trim();
+    const address = document.getElementById('branchAddress').value.trim();
+    if (!name || !location) { alert('Branch name and location are required.'); return; }
+
+    _branches.push({ name, location, address });
+    document.getElementById('branchName').value = '';
+    document.getElementById('branchLocation').value = '';
+    document.getElementById('branchAddress').value = '';
+    renderBranches();
+  }
+
+  function removeBranch(idx) {
+    _branches.splice(idx, 1);
+    renderBranches();
+  }
+
+  function renderBranches() {
+    const el = document.getElementById('branchList');
+    if (!_branches.length) {
+      el.innerHTML = `
+        <div class="empty-branches" id="emptyBranches" style="text-align:center; padding:20px; font-size:0.8125rem; color:var(--own-muted); border:1px dashed var(--own-border); border-radius:var(--own-radius-sm);">
+          No branch offices added yet.
+        </div>`;
+      return;
+    }
+    el.innerHTML = _branches.map((b, i) => `
+      <div class="branch-list-card">
+        <div class="branch-list-card-details">
+          <div class="branch-list-card-name">${b.name}</div>
+          <div class="branch-list-card-loc">${b.location}${b.address ? ' · ' + b.address : ''}</div>
+        </div>
+        <button class="branch-list-remove" onclick="removeBranch(${i})" title="Remove branch">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>`).join('');
+  }
+
+  // Navigation validation
+  function goStep1() { showStep(1); }
+
+  function goStep2() {
+    hideError();
+    const fname = document.getElementById('firstName').value.trim();
+    const lname = document.getElementById('lastName').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const pw = document.getElementById('password').value;
+    const cpw = document.getElementById('confirmPw').value;
+    const terms = document.getElementById('terms').checked;
+
+    if (!fname) return showError('Please enter your first name.');
+    if (!email || !/\S+@\S+\.\S+/.test(email)) return showError('Please enter a valid email address.');
+    if (!phone) return showError('Please enter your phone number.');
+    if (!isPasswordSecure()) return showError('Password must have at least 8 characters, one uppercase, one lowercase, one number, and one special character.');
+    if (pw !== cpw) return showError('Passwords do not match.');
+    if (!terms) return showError('Please agree to the Terms of Service.');
+
+    showStep(2);
+  }
+
+  // Step 2 validation to go to Step 3
+  function goStep3() {
+    hideError();
+    const orgName = document.getElementById('orgName').value.trim();
+    const city = document.getElementById('hqCity').value.trim();
+    const country = document.getElementById('hqCountry').value;
+
+    if (!orgName) return showError('Please enter organization name.');
+    if (!city) return showError('Please enter headquarters city.');
+    if (!country) return showError('Please select headquarters country.');
+
+    showStep(3);
+  }
+
+  // API Submit payload matching database schema
+  async function submitSignup() {
+    hideError();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="shad-spinner"></span> Submitting…';
+
+    const fname = document.getElementById('firstName').value.trim();
+    const lname = document.getElementById('lastName').value.trim();
+    const fullName = (fname + ' ' + lname).trim();
+
+    // Get state display name from the select
+    const hqStateEl = document.getElementById('hqState');
+    const stateVal = hqStateEl.options[hqStateEl.selectedIndex]?.text || '';
+
+    const payload = {
+      name: fullName,
+      email: document.getElementById('email').value.trim(),
+      password: document.getElementById('password').value,
+      orgName: document.getElementById('orgName').value.trim(),
+      logo: _logoData || '',
+      industry: document.getElementById('industry').value,
+      website: document.getElementById('website').value.trim(),
+      location: {
+        city: document.getElementById('hqCity').value.trim(),
+        state: stateVal !== 'Select state…' && stateVal !== 'No states available' ? stateVal : '',
+        country: document.getElementById('hqCountry').value,
+        zip: document.getElementById('hqZip').value.trim(),
+        address: document.getElementById('hqAddress').value.trim(),
+      },
+      branches: _branches,
+    };
+
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Registration failed');
+      showStep(4);
+    } catch (err) {
+      showError(err.message);
+      btn.disabled = false;
+      btn.innerHTML = 'Create Organization & Continue';
+    }
+  }
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closePolicyModal();
+  });
+
+  // Init
+  showStep(1);
+  loadCountries();
+</script>
+</body>
+</html>
