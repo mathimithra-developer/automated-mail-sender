@@ -1,0 +1,4 @@
+name,phoneNo,email,city,plan,lead_score,company,industry
+Alice Tester,9876543210,alice@tester.com,Chennai,Enterprise,95,TestCorp,Software
+Bob Builder,8765432109,bob@builder.com,Lucknow,Free,20,BuildInc,Construction
+Charlie Dev,7654321098,charlie@dev.com,Chennai,Pro,60,DevSoft,IT

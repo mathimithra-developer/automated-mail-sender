@@ -1,14 +1,13 @@
 {
-  "name": "mail-sender",
+  "name": "mail-sender-backend",
   "version": "1.0.0",
-  "description": "Multi-tenant automated HTML email sender",
-  "main": "backend/server.js",
+  "description": "Mail Sender Backend API Server",
+  "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node backend/server.js",
-    "dev": "node --watch backend/server.js",
-    "dev:react": "cd frontend-react && npm run dev",
-    "seed": "node backend/seed.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node seed.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1090.0",
