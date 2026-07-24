@@ -46,12 +46,19 @@ export function renderBlockHTML(comp: BuilderBlock): string {
 export function exportHTML(data: TemplateData): string {
   const { globalTheme, sections } = data;
   const font = globalTheme.fontFamily || 'Inter, sans-serif';
-  const bg = globalTheme.backgroundColor || '#f4f4f5';
+  const pageBg = globalTheme.pageBackgroundColor || globalTheme.backgroundColor || '#f3f4f6';
+  const pageImg = globalTheme.pageBackgroundImage || '';
+  const bodyBg = globalTheme.bodyBackgroundColor || '#ffffff';
+  const bodyImg = globalTheme.bodyBackgroundImage || '';
+  const bodyWidth = globalTheme.bodyWidth || 600;
   const textColor = globalTheme.textColor || '#18181b';
+
+  const bodyBgStyle = bodyImg ? `background-color:${bodyBg};background-image:url('${bodyImg}');background-size:cover;` : `background-color:${bodyBg};`;
+  const pageBgStyle = pageImg ? `background-color:${pageBg};background-image:url('${pageImg}');background-size:${globalTheme.pageBackgroundSize || 'cover'};background-repeat:${globalTheme.pageBackgroundRepeat || 'no-repeat'};` : `background-color:${pageBg};`;
 
   const sectionsHTML = sections
     .map((sec: SectionData) => {
-      const secBg = sec.background || '#ffffff';
+      const secBg = sec.background || 'transparent';
       const secPadding = sec.padding || '24px 20px';
 
       const colsHTML = sec.columns
@@ -66,7 +73,7 @@ export function exportHTML(data: TemplateData): string {
 <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:${secBg};">
   <tr>
     <td align="center" style="padding:${secPadding};">
-      <table role="presentation" width="600" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;">
+      <table role="presentation" width="${bodyWidth}" border="0" cellspacing="0" cellpadding="0" style="max-width:${bodyWidth}px;width:100%;">
         <tr>
           ${colsHTML}
         </tr>
@@ -84,15 +91,25 @@ export function exportHTML(data: TemplateData): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${data.name}</title>
   <style>
-    body { margin: 0; padding: 0; font-family: ${font}; background-color: ${bg}; color: ${textColor}; }
+    body { margin: 0; padding: 0; font-family: ${font}; color: ${textColor}; }
     table { border-collapse: collapse; }
     img { max-width: 100%; height: auto; }
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:${bg};font-family:${font};">
-  <div style="background-color:${bg};padding:20px 0;">
-    ${sectionsHTML}
-  </div>
+<body style="margin:0;padding:0;font-family:${font};${pageBgStyle}">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="${pageBgStyle}padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="${bodyWidth}" border="0" cellspacing="0" cellpadding="0" style="max-width:${bodyWidth}px;width:100%;${bodyBgStyle}border-radius:${globalTheme.bodyBorderRadius || 16}px;overflow:hidden;">
+          <tr>
+            <td>
+              ${sectionsHTML}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 }

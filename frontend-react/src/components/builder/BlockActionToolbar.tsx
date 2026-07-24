@@ -1,8 +1,9 @@
 import React from 'react';
-import { ArrowUp, ArrowDown, Copy, Trash2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Copy, Trash2, GripVertical } from 'lucide-react';
 
 export interface BlockActionToolbarProps {
   isSelected: boolean;
+  isHovered?: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
   onMoveUp: () => void;
@@ -13,6 +14,7 @@ export interface BlockActionToolbarProps {
 
 export const BlockActionToolbar: React.FC<BlockActionToolbarProps> = ({
   isSelected,
+  isHovered,
   canMoveUp,
   canMoveDown,
   onMoveUp,
@@ -20,25 +22,43 @@ export const BlockActionToolbar: React.FC<BlockActionToolbarProps> = ({
   onDuplicate,
   onDelete,
 }) => {
-  if (!isSelected) return null;
+  if (!isSelected && !isHovered) return null;
 
   return (
     <div
       onClick={(e) => e.stopPropagation()}
       style={{
         position: 'absolute',
-        top: -12,
+        top: -14,
         right: 12,
         display: 'flex',
         alignItems: 'center',
-        gap: 4,
+        gap: 3,
         background: '#ffffff',
         padding: '3px 6px',
         borderRadius: 20,
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-        zIndex: 20,
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.08)',
+        zIndex: 30,
+        animation: 'fadeIn 0.15s ease-out',
       }}
     >
+      {/* Drag Handle Icon */}
+      <div
+        title="Drag Handle"
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#94a3b8',
+          cursor: 'grab',
+        }}
+      >
+        <GripVertical size={13} />
+      </div>
+
       {/* Move Up */}
       <button
         type="button"
@@ -50,15 +70,13 @@ export const BlockActionToolbar: React.FC<BlockActionToolbarProps> = ({
           height: 24,
           borderRadius: '50%',
           border: 'none',
-          background: '#2563eb',
-          color: '#ffffff',
+          background: canMoveUp ? '#eff6ff' : '#f1f5f9',
+          color: canMoveUp ? '#2563eb' : '#cbd5e1',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: canMoveUp ? 'pointer' : 'not-allowed',
-          opacity: canMoveUp ? 1 : 0.35,
-          pointerEvents: canMoveUp ? 'auto' : 'none',
-          transition: 'background-color 0.15s, opacity 0.15s',
+          transition: 'all 0.15s',
         }}
       >
         <ArrowUp size={13} />
@@ -75,15 +93,13 @@ export const BlockActionToolbar: React.FC<BlockActionToolbarProps> = ({
           height: 24,
           borderRadius: '50%',
           border: 'none',
-          background: '#2563eb',
-          color: '#ffffff',
+          background: canMoveDown ? '#eff6ff' : '#f1f5f9',
+          color: canMoveDown ? '#2563eb' : '#cbd5e1',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: canMoveDown ? 'pointer' : 'not-allowed',
-          opacity: canMoveDown ? 1 : 0.35,
-          pointerEvents: canMoveDown ? 'auto' : 'none',
-          transition: 'background-color 0.15s, opacity 0.15s',
+          transition: 'all 0.15s',
         }}
       >
         <ArrowDown size={13} />
@@ -99,13 +115,13 @@ export const BlockActionToolbar: React.FC<BlockActionToolbarProps> = ({
           height: 24,
           borderRadius: '50%',
           border: 'none',
-          background: '#2563eb',
-          color: '#ffffff',
+          background: '#eff6ff',
+          color: '#2563eb',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          transition: 'background-color 0.15s',
+          transition: 'all 0.15s',
         }}
       >
         <Copy size={13} />
@@ -121,13 +137,13 @@ export const BlockActionToolbar: React.FC<BlockActionToolbarProps> = ({
           height: 24,
           borderRadius: '50%',
           border: 'none',
-          background: '#ef4444',
-          color: '#ffffff',
+          background: '#fef2f2',
+          color: '#dc2626',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          transition: 'background-color 0.15s',
+          transition: 'all 0.15s',
         }}
       >
         <Trash2 size={13} />

@@ -52,7 +52,7 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
 
   const fetchTemplates = async () => {
     try {
-      const res = await api.get('/api/whatsapp/templates');
+      const res = await api.post('/api/whatsapp/templates');
       const rawList = Array.isArray(res?.waMsgTemplates)
         ? res.waMsgTemplates
         : Array.isArray(res?.data?.waMsgTemplates)
@@ -118,21 +118,33 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
     setSelectedTemplateId(tmplId);
     setSelectedTemplate(template);
 
-    // Extract placeholders {{1}}, {{2}} from HEADER & BODY components
+    // Extract placeholders {{1}}, {{2}} or {{var}} from HEADER & BODY components
     const newMappings: VarMappingItem[] = [];
 
     template.components.forEach((comp) => {
       if (comp.type === 'HEADER' || comp.type === 'BODY') {
-        const matches = (comp.text || '').match(/\{\{(\d+)\}\}/g);
-        if (matches) {
-          const uniqueIndexes = Array.from(new Set(matches.map((m) => parseInt(m.replace(/[^\d]/g, ''), 10))));
-          uniqueIndexes.sort((a, b) => a - b).forEach((idx) => {
+        const matches = (comp.text || '').match(/\{\{(.*?)\}\}/g);
+        if (matches && matches.length > 0) {
+          matches.forEach((m, idx) => {
+            const suggestedHeader = idx === 0
+              ? (nameColumn || headers[0] || 'name')
+              : (phoneColumn || headers[1] || 'phoneNo');
             newMappings.push({
               componentType: comp.type as 'HEADER' | 'BODY',
-              varIndex: idx,
-              field: headers[0] || 'name',
-              fallbackValue: comp.type === 'HEADER' ? 'Customer' : 'Valued Member',
+              varIndex: idx + 1,
+              field: suggestedHeader,
+              fallbackValue: comp.type === 'HEADER' ? 'best Customer' : 'your address',
             });
+          });
+        } else {
+          const defaultField = comp.type === 'HEADER'
+            ? (nameColumn || headers[0] || 'name')
+            : (phoneColumn || headers[1] || 'phoneNo');
+          newMappings.push({
+            componentType: comp.type as 'HEADER' | 'BODY',
+            varIndex: 1,
+            field: defaultField,
+            fallbackValue: comp.type === 'HEADER' ? 'best Customer' : 'your address',
           });
         }
       }
@@ -149,25 +161,57 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
     });
   };
 
+  const validateVariableMappings = (): boolean => {
+    if (!selectedTemplate) return true;
+    for (const m of variableMappings) {
+      if (!m.field || !m.field.trim()) {
+        showToast(
+          'Variable Mapping Required',
+          `Please select a CSV column for ${m.componentType} {{${m.varIndex}}} in the selected template`,
+          'warning'
+        );
+        return false;
+      }
+    }
+    return true;
+  };
+
   const buildTemplateVariableData = () => {
     if (!selectedTemplate) return [];
 
     const result: any[] = [];
 
-    // Group mappings by componentType
     ['HEADER', 'BODY'].forEach((typeStr) => {
       const comp = selectedTemplate.components.find((c) => c.type === typeStr);
       if (comp) {
-        const compMappings = variableMappings.filter((m) => m.componentType === typeStr);
-        if (compMappings.length > 0) {
+        const compMappings = variableMappings.filter(
+          (m) => m.componentType === typeStr
+        );
+
+        const variables = compMappings.length > 0
+          ? compMappings.map((m) => ({
+              field: m.field.trim() || (typeStr === 'HEADER' ? nameColumn || 'name' : phoneColumn || 'phoneNo'),
+              fallbackValue: m.fallbackValue ? m.fallbackValue.trim() : (typeStr === 'HEADER' ? 'best Customer' : 'your address'),
+            }))
+          : [
+              {
+                field: typeStr === 'HEADER' ? nameColumn || 'name' : phoneColumn || 'phoneNo',
+                fallbackValue: typeStr === 'HEADER' ? 'best Customer' : 'your address',
+              },
+            ];
+
+        if (typeStr === 'HEADER') {
           result.push({
-            type: typeStr,
+            type: 'HEADER',
             format: comp.format || 'TEXT',
             show: true,
-            variables: compMappings.map((m) => ({
-              field: m.field,
-              fallbackValue: m.fallbackValue,
-            })),
+            variables,
+          });
+        } else if (typeStr === 'BODY') {
+          result.push({
+            type: 'BODY',
+            show: true,
+            variables,
           });
         }
       }
@@ -187,6 +231,13 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
       showToast('Template Required', 'Please select a WhatsApp message template', 'warning');
       return;
     }
+    if (!nameColumn || !phoneColumn) {
+      showToast('Mapping Required', 'Please select Name and Phone columns', 'warning');
+      return;
+    }
+    if (!validateVariableMappings()) {
+      return;
+    }
 
     setLoading(true);
     try {
@@ -194,13 +245,24 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
       const tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
 
       const payload = {
+        csvFileKey,
+        systemMapping: {
+          nameColumn: nameColumn,
+          phoneColumn: phoneColumn,
+        },
+        campaignMeta: {
+          name: campaignName.trim(),
+          templateId: selectedTemplate._id || selectedTemplate.id || selectedTemplate.name,
+          publishMode: 'now',
+          isRetryEnabled: true,
+          retries: [2],
+          tags,
+          templateVariableData,
+        },
         campaignName: campaignName.trim(),
         templateId: selectedTemplate._id || selectedTemplate.id || selectedTemplate.name,
-        csvFileKey,
-        nameColumn,
-        phoneColumn,
-        templateVariableData,
-        tags,
+        nameColumn: nameColumn,
+        phoneColumn: phoneColumn,
         contactCount,
       };
 
@@ -243,13 +305,13 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
         <div
           className="modal-header"
           style={{
-            background: 'linear-gradient(135deg, #075E54 0%, #128C7E 100%)',
+            background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
             color: '#ffffff',
             padding: '16px 20px',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <MessageSquare style={{ width: 22, height: 22, color: '#25D366' }} />
+            <MessageSquare style={{ width: 22, height: 22, color: '#93c5fd' }} />
             <div>
               <h2 className="modal-title" style={{ color: '#ffffff', margin: 0, fontSize: 18 }}>
                 New WhatsApp Bulk Campaign
@@ -275,19 +337,19 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
             fontWeight: 600,
           }}
         >
-          <div style={{ color: step === 1 ? '#128C7E' : '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ color: step === 1 ? '#2563eb' : '#64748b', display: 'flex', alignItems: 'center', gap: 4, fontWeight: step === 1 ? 700 : 500 }}>
             <span>1. Upload CSV</span>
           </div>
           <span style={{ margin: '0 8px', color: '#cbd5e1' }}>/</span>
-          <div style={{ color: step === 2 ? '#128C7E' : '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ color: step === 2 ? '#2563eb' : '#64748b', display: 'flex', alignItems: 'center', gap: 4, fontWeight: step === 2 ? 700 : 500 }}>
             <span>2. Column Mapping</span>
           </div>
           <span style={{ margin: '0 8px', color: '#cbd5e1' }}>/</span>
-          <div style={{ color: step === 3 ? '#128C7E' : '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ color: step === 3 ? '#2563eb' : '#64748b', display: 'flex', alignItems: 'center', gap: 4, fontWeight: step === 3 ? 700 : 500 }}>
             <span>3. Template & Variables</span>
           </div>
           <span style={{ margin: '0 8px', color: '#cbd5e1' }}>/</span>
-          <div style={{ color: step === 4 ? '#128C7E' : '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ color: step === 4 ? '#2563eb' : '#64748b', display: 'flex', alignItems: 'center', gap: 4, fontWeight: step === 4 ? 700 : 500 }}>
             <span>4. Launch</span>
           </div>
         </div>
@@ -308,7 +370,7 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
                 }}
                 onClick={() => document.getElementById('whatsapp-csv-file-input')?.click()}
               >
-                <Upload style={{ width: 36, height: 36, color: '#128C7E', marginBottom: 10 }} />
+                <Upload style={{ width: 36, height: 36, color: '#2563eb', marginBottom: 10 }} />
                 <h4 style={{ margin: '0 0 6px 0', fontSize: 15, color: '#0f172a' }}>
                   Select a CSV file containing contact list
                 </h4>
@@ -332,18 +394,18 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '10px 14px',
-                    background: 'rgba(37, 211, 102, 0.1)',
-                    border: '1px solid rgba(37, 211, 102, 0.3)',
+                    background: 'rgba(37, 99, 235, 0.08)',
+                    border: '1px solid rgba(37, 99, 235, 0.25)',
                     borderRadius: 6,
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <FileText style={{ width: 18, height: 18, color: '#128C7E' }} />
+                    <FileText style={{ width: 18, height: 18, color: '#2563eb' }} />
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>
                       {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
                     </span>
                   </div>
-                  <Check style={{ width: 18, height: 18, color: '#16a34a' }} />
+                  <Check style={{ width: 18, height: 18, color: '#2563eb' }} />
                 </div>
               )}
             </div>
@@ -460,7 +522,7 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
                   </p>
                   {selectedTemplate.components.map((c, i) => (
                     <div key={i} style={{ marginBottom: 6, fontSize: 12, color: '#475569' }}>
-                      <strong style={{ color: '#128C7E' }}>{c.type}:</strong> {c.text}
+                      <strong style={{ color: '#2563eb' }}>{c.type}:</strong> {c.text}
                     </div>
                   ))}
                 </div>
@@ -486,7 +548,7 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
                         border: '1px solid #e2e8f0',
                       }}
                     >
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#128C7E' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#2563eb' }}>
                         {m.componentType} {'{{' + m.varIndex + '}}'}
                       </span>
 
@@ -573,7 +635,7 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>Selected Template:</span>
-                  <span style={{ fontWeight: 700, color: '#128C7E' }}>{selectedTemplate?.name}</span>
+                  <span style={{ fontWeight: 700, color: '#2563eb' }}>{selectedTemplate?.name}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>Mapped Variables:</span>
@@ -601,7 +663,7 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
             <button
               type="button"
               className="btn"
-              style={{ background: '#128C7E', color: '#ffffff' }}
+              style={{ background: '#2563eb', color: '#ffffff', fontWeight: 600 }}
               onClick={handleUploadCSV}
               disabled={loading || !selectedFile}
             >
@@ -614,7 +676,7 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
             <button
               type="button"
               className="btn"
-              style={{ background: '#128C7E', color: '#ffffff' }}
+              style={{ background: '#2563eb', color: '#ffffff', fontWeight: 600 }}
               onClick={() => {
                 if (!nameColumn || !phoneColumn) {
                   showToast('Mapping Required', 'Please select Name and Phone columns', 'warning');
@@ -631,10 +693,13 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
             <button
               type="button"
               className="btn"
-              style={{ background: '#128C7E', color: '#ffffff' }}
+              style={{ background: '#2563eb', color: '#ffffff', fontWeight: 600 }}
               onClick={() => {
                 if (!selectedTemplate) {
                   showToast('Template Required', 'Please select a WhatsApp template', 'warning');
+                  return;
+                }
+                if (!validateVariableMappings()) {
                   return;
                 }
                 if (!campaignName) {
@@ -651,7 +716,7 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
             <button
               type="button"
               className="btn"
-              style={{ background: '#25D366', color: '#0f172a', fontWeight: 800 }}
+              style={{ background: '#2563eb', color: '#ffffff', fontWeight: 700 }}
               onClick={handleTriggerCampaign}
               disabled={loading}
             >

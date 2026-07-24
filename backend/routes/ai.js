@@ -1,4 +1,4 @@
-/** /api/ai — AI-powered email tools via Google Gemini */
+/** /api/ai — AI-powered email tools via Together AI */
 import { Router } from 'express';
 import * as AI from '../lib/ai.js';
 import path from 'path';

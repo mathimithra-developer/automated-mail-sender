@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Image as ImageIcon, Sparkles, Upload, Eye, Link, Trash2, X } from 'lucide-react';
+import { Image as ImageIcon, Sparkles, Upload, Eye, Link, Trash2, X, ArrowLeft } from 'lucide-react';
 import { Asset } from '../types';
 import { api } from '../services/api';
 import { useToast } from '../context/ToastContext';
@@ -92,10 +92,7 @@ export const AssetsPage: React.FC = () => {
   return (
     <section className="page active" id="assets">
       <div className="page-header">
-        <div>
-          <p className="breadcrumb">
-            <ImageIcon style={{ width: 12, height: 12 }} /> Assets
-          </p>
+        <div className="page-header-left">
           <h1 className="page-title">Asset Library</h1>
           <p className="page-description">Upload and manage images for your emails.</p>
         </div>
@@ -168,29 +165,37 @@ export const AssetsPage: React.FC = () => {
         )}
       </div>
 
-      {/* AI Modal */}
+      {/* AI Image Generator Slide-Over Drawer */}
       {showAiModal && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <div className="modal-header">
-              <h2 className="modal-title">Together AI — Image Generator</h2>
-              <button className="modal-close" onClick={() => setShowAiModal(false)}>
-                <X style={{ width: 16, height: 16 }} />
+        <div className="drawer-overlay active" style={{ display: 'block' }} onClick={() => setShowAiModal(false)}>
+          <div className="drawer-card" onClick={(e) => e.stopPropagation()}>
+            <div className="drawer-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button type="button" className="drawer-back" onClick={() => setShowAiModal(false)}>
+                  <ArrowLeft style={{ width: 18, height: 18 }} />
+                </button>
+                <h2 className="drawer-title">Together AI — Image Generator</h2>
+              </div>
+              <button type="button" className="drawer-close" onClick={() => setShowAiModal(false)}>
+                <X style={{ width: 18, height: 18 }} />
               </button>
             </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">Image Prompt</label>
-                <textarea
-                  className="property-input"
-                  rows={4}
-                  placeholder="A sleek modern SaaS dashboard mockup with vibrant neon blue highlights..."
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                />
+            <div className="drawer-body">
+              <div className="drawer-section">
+                <h3 className="drawer-section-title">PROMPT CONFIGURATION</h3>
+                <div className="form-group">
+                  <label className="form-label">IMAGE PROMPT</label>
+                  <textarea
+                    className="property-input"
+                    rows={5}
+                    placeholder="A sleek modern SaaS dashboard mockup with vibrant neon blue highlights..."
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-            <div className="modal-footer">
+            <div className="drawer-footer">
               <button className="btn btn-secondary" onClick={() => setShowAiModal(false)}>
                 Cancel
               </button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GitBranch, Plus, X, Trash2, Trophy } from 'lucide-react';
+import { GitBranch, Plus, X, Trash2, Trophy, ArrowLeft } from 'lucide-react';
 import { ABTest, Campaign } from '../types';
 import { api } from '../services/api';
 import { useToast } from '../context/ToastContext';
@@ -109,13 +109,12 @@ export const ABTestsPage: React.FC = () => {
   return (
     <section className="page active" id="abtests">
       <div className="page-header">
-        <div>
-          <p className="breadcrumb"><GitBranch style={{ width: 12, height: 12 }} /> A/B Tests</p>
+        <div className="page-header-left">
           <h1 className="page-title">A/B Tests</h1>
           <p className="page-description">Compare two campaign variants and pick a winner.</p>
         </div>
         <button className="btn" onClick={() => { resetForm(); setShowModal(true); }}>
-          <Plus style={{ width: 14, height: 14 }} /> New A/B Test
+          <Plus style={{ width: 16, height: 16 }} /> New A/B Test
         </button>
       </div>
 
@@ -185,75 +184,83 @@ export const ABTestsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Create A/B Test Modal */}
+      {/* Create A/B Test Slide-Over Drawer */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <div className="modal-header">
-              <h2 className="modal-title">New A/B Test</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>
-                <X style={{ width: 16, height: 16 }} />
+        <div className="drawer-overlay active" style={{ display: 'block' }} onClick={() => setShowModal(false)}>
+          <div className="drawer-card" onClick={(e) => e.stopPropagation()}>
+            <div className="drawer-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button type="button" className="drawer-back" onClick={() => setShowModal(false)}>
+                  <ArrowLeft style={{ width: 18, height: 18 }} />
+                </button>
+                <h2 className="drawer-title">New A/B Test</h2>
+              </div>
+              <button type="button" className="drawer-close" onClick={() => setShowModal(false)}>
+                <X style={{ width: 18, height: 18 }} />
               </button>
             </div>
-            <form onSubmit={handleCreateTest}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
+            <form onSubmit={handleCreateTest} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', margin: 0 }}>
+              <div className="drawer-body">
                 {campaigns.length < 2 && (
-                  <div style={{ background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#92400e' }}>
+                  <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: '#92400E', marginBottom: 14 }}>
                     ⚠️ You need at least 2 campaigns to run an A/B test. Create campaigns first.
                   </div>
                 )}
 
-                <div className="form-group">
-                  <label className="form-label">Test Name *</label>
-                  <input
-                    type="text" className="property-input" required
-                    placeholder="e.g., Subject Line Comparison"
-                    value={name} onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
+                <div className="drawer-section">
+                  <h3 className="drawer-section-title">TEST CONFIGURATION</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="form-group">
+                      <label className="form-label">TEST NAME *</label>
+                      <input
+                        type="text" className="property-input" required
+                        placeholder="e.g., Subject Line Comparison"
+                        value={name} onChange={(e) => setName(e.target.value)}
+                      />
+                    </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label">Variant A — Campaign *</label>
-                    <select className="property-select" required value={campaignA} onChange={(e) => setCampaignA(e.target.value)}>
-                      <option value="">Select Campaign A...</option>
-                      {campaigns.filter((c) => c._id !== campaignB).map((c, idx) => (
-                        <option key={c._id ? `${c._id}-${idx}` : `optA-${idx}`} value={c._id}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Variant B — Campaign *</label>
-                    <select className="property-select" required value={campaignB} onChange={(e) => setCampaignB(e.target.value)}>
-                      <option value="">Select Campaign B...</option>
-                      {campaigns.filter((c) => c._id !== campaignA).map((c, idx) => (
-                        <option key={c._id ? `${c._id}-${idx}` : `optB-${idx}`} value={c._id}>{c.name}</option>
-                      ))}
-                    </select>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div className="form-group">
+                        <label className="form-label">VARIANT A (CAMPAIGN) *</label>
+                        <select className="property-select" required value={campaignA} onChange={(e) => setCampaignA(e.target.value)}>
+                          <option value="">Select Campaign A...</option>
+                          {campaigns.filter((c) => c._id !== campaignB).map((c, idx) => (
+                            <option key={c._id ? `${c._id}-${idx}` : `optA-${idx}`} value={c._id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">VARIANT B (CAMPAIGN) *</label>
+                        <select className="property-select" required value={campaignB} onChange={(e) => setCampaignB(e.target.value)}>
+                          <option value="">Select Campaign B...</option>
+                          {campaigns.filter((c) => c._id !== campaignA).map((c, idx) => (
+                            <option key={c._id ? `${c._id}-${idx}` : `optB-${idx}`} value={c._id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div className="form-group">
+                        <label className="form-label">SPLIT % (VARIANT A)</label>
+                        <input type="number" className="property-input" min={10} max={90}
+                          value={splitPercent} onChange={(e) => setSplitPercent(Number(e.target.value))} />
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, display: 'block' }}>
+                          Variant B gets {100 - splitPercent}%
+                        </span>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">WINNER METRIC</label>
+                        <select className="property-select" value={winnerMetric} onChange={(e) => setWinnerMetric(e.target.value as any)}>
+                          <option value="open_rate">Open Rate</option>
+                          <option value="click_rate">Click Rate</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label">Split % (Variant A)</label>
-                    <input type="number" className="property-input" min={10} max={90}
-                      value={splitPercent} onChange={(e) => setSplitPercent(Number(e.target.value))} />
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, display: 'block' }}>
-                      Variant B gets {100 - splitPercent}%
-                    </span>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Winner Metric</label>
-                    <select className="property-select" value={winnerMetric} onChange={(e) => setWinnerMetric(e.target.value as any)}>
-                      <option value="open_rate">Open Rate</option>
-                      <option value="click_rate">Click Rate</option>
-                    </select>
-                  </div>
-                </div>
-
               </div>
-              <div className="modal-footer">
+              <div className="drawer-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="btn" disabled={submitting || campaigns.length < 2}>
                   {submitting ? 'Starting...' : 'Start A/B Test'}

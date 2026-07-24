@@ -1,34 +1,45 @@
 /**
- * AI Service — Google Gemini (gemini-1.5-flash)
- * Set GEMINI_API_KEY in .env
- * Docs: https://ai.google.dev/api/generate-content
+ * AI Service — Together AI (Llama 3.3 70B Instruct Turbo)
+ * Set TOGETHER_API_KEY in .env
+ * Docs: https://docs.together.ai/reference/chat-completions
  */
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const TOGETHER_CHAT_URL = 'https://api.together.xyz/v1/chat/completions';
+const TOGETHER_MODEL = 'meta-llama/Llama-3.3-70B-Instruct-Turbo';
 
-async function callGemini(prompt, systemInstruction = '') {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error('GEMINI_API_KEY not set in .env');
+async function callTogetherAI(prompt, systemInstruction = '') {
+  const key = process.env.TOGETHER_API_KEY;
+  if (!key) throw new Error('TOGETHER_API_KEY not set in .env');
+
+  const messages = [];
+  if (systemInstruction) {
+    messages.push({ role: 'system', content: systemInstruction });
+  }
+  messages.push({ role: 'user', content: prompt });
 
   const body = {
-    system_instruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+    model: TOGETHER_MODEL,
+    messages,
+    temperature: 0.7,
+    max_tokens: 2048,
   };
 
-  const res = await fetch(`${GEMINI_URL}?key=${key}`, {
+  const res = await fetch(TOGETHER_CHAT_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`,
+    },
     body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`Gemini error ${res.status}: ${err?.error?.message || JSON.stringify(err)}`);
+    throw new Error(`Together AI error ${res.status}: ${err?.error?.message || JSON.stringify(err)}`);
   }
 
   const data = await res.json();
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return data?.choices?.[0]?.message?.content || '';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,7 +58,7 @@ Rules:
 - Use #8b5cf6 as the primary accent color
 Context: ${JSON.stringify(context)}`;
 
-  const text = await callGemini(prompt, system);
+  const text = await callTogetherAI(prompt, system);
   // Strip markdown code fences if model wraps in ```html
   return text.replace(/^```(?:html)?\n?/i, '').replace(/\n?```$/i, '').trim();
 }
@@ -67,7 +78,7 @@ Rules:
 - Return as a JSON array of strings like: ["line1","line2","line3","line4","line5"]
 - Return ONLY the JSON array, nothing else`;
 
-  const text = await callGemini(prompt);
+  const text = await callTogetherAI(prompt);
   try {
     const clean = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
     return JSON.parse(clean);
@@ -101,12 +112,12 @@ spamScore: 0-10 (0=clean, 10=definite spam)
 spamLevel: "low" | "medium" | "high"
 Return ONLY the JSON object, nothing else.`;
 
-  const text = await callGemini(prompt);
+  const text = await callTogetherAI(prompt);
   try {
     const clean = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
     return JSON.parse(clean);
   } catch {
-    return { spamScore: 0, spamLevel: 'low', issues: [], suggestions: ['Enable GEMINI_API_KEY for full analysis'], readabilityScore: 75, wordCount: 0, estimatedReadTime: 'N/A', previewText: '' };
+    return { spamScore: 0, spamLevel: 'low', issues: [], suggestions: ['Enable TOGETHER_API_KEY for full analysis'], readabilityScore: 75, wordCount: 0, estimatedReadTime: 'N/A', previewText: '' };
   }
 }
 
@@ -133,12 +144,12 @@ score: 0-100
 grade: "A" | "B" | "C" | "D" | "F"
 Return ONLY the JSON object.`;
 
-  const text = await callGemini(prompt);
+  const text = await callTogetherAI(prompt);
   try {
     const clean = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
     return JSON.parse(clean);
   } catch {
-    return { score: 100, grade: 'A', issues: [], passed: ['Set GEMINI_API_KEY for real analysis'] };
+    return { score: 100, grade: 'A', issues: [], passed: ['Set TOGETHER_API_KEY for real analysis'] };
   }
 }
 
@@ -150,7 +161,7 @@ export async function rewriteContent(text, tone = 'professional') {
 Keep the same HTML structure and tags. Only change the text content.
 Return ONLY the rewritten HTML, nothing else.
 Original: ${text}`;
-  return callGemini(prompt);
+  return callTogetherAI(prompt);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -161,7 +172,7 @@ export async function generateABVariant(subject) {
 Original: "${subject}"
 Make it meaningfully different (different angle/style) but for the same campaign.
 Return ONLY the subject line string, nothing else.`;
-  const text = await callGemini(prompt);
+  const text = await callTogetherAI(prompt);
   return text.replace(/^["']|["']$/g, '').trim();
 }
 

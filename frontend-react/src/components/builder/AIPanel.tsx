@@ -33,7 +33,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
       const res = await api.post('/api/ai/generate', { prompt });
       if (res.data && res.data.sections) {
         onLoadGeneratedTemplate(res.data);
-        showToast('Template Generated', 'Gemini AI generated a new email layout.', 'success');
+        showToast('Template Generated', 'Together AI generated a new email layout.', 'success');
       } else {
         showToast('Generation complete', 'AI design response ready', 'info');
       }
@@ -98,7 +98,7 @@ export const AIPanel: React.FC<AIPanelProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Sparkles size={18} style={{ color: '#8b5cf6' }} />
           <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
-            Gemini AI Assistant
+            Together AI Assistant
           </h4>
         </div>
         <p style={{ margin: '4px 0 0 0', fontSize: 12, color: '#64748b' }}>

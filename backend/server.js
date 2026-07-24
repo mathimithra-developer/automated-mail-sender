@@ -3,8 +3,15 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
-import "dotenv/config";
+import dotenv from "dotenv";
 import { Country, State } from "country-state-city";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+
+// Ensure .env is loaded from workspace root even if process started from backend/
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config();
 
 import { connectDB } from "./lib/db.js";
 import { User, Organization, OrgEmailSettings, Customer, Unsubscribe, EmailTemplate, CustomField } from "./lib/models.js";
@@ -27,9 +34,6 @@ import customFieldRoutes   from "./routes/customfields.js";
 import whatsappRoutes      from "./routes/whatsapp.js";
 
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
-
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
@@ -47,13 +51,34 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // and is completely disabled when NODE_ENV=production. Set NODE_ENV=production in
 // your deployment environment to ensure this path is never reachable in production.
 async function requireAuth(req, res, next) {
-  if (req.session?.userId) return next();
+  if (req.session?.userId) {
+    try {
+      const orgExists = req.session.orgId ? await Organization.exists({ _id: req.session.orgId }) : null;
+      if (orgExists) return next();
 
-  // Dev-only bypass: disabled in production
-  if (
-    process.env.NODE_ENV !== 'production' &&
-    (req.query.bypass === 'true' || req.headers['x-bypass'] === 'true')
-  ) {
+      // If orgId from session does not exist (e.g. server restarted and DB reseeded), auto-repair session to seeded default org/user
+      const devUser = (await User.findOne({ email: req.session.email }).populate('organization')) || (await User.findOne().populate('organization'));
+      if (devUser && devUser.organization) {
+        const sessionData = {
+          userId:   devUser._id.toString(),
+          orgId:    devUser.organization._id.toString(),
+          email:    devUser.email,
+          role:     devUser.role,
+          userName: devUser.name,
+          orgName:  devUser.organization.name,
+          orgIndustry: devUser.organization.industry || 'Other',
+        };
+        req.session = sessionData;
+        setSessionCookie(res, sessionData);
+        return next();
+      }
+    } catch (e) {
+      // Fallthrough to standard logic
+    }
+  }
+
+  // Dev-only auto-login: in development mode, automatically grant access as seeded dev user if unauthenticated
+  if (process.env.NODE_ENV !== 'production') {
     try {
       const { Customer: CustModel } = await import('./lib/models.js');
       const custWithOrg = await CustModel.findOne({}).lean();
@@ -72,22 +97,21 @@ async function requireAuth(req, res, next) {
         orgIndustry: devUser.organization.industry || 'Other',
       } : {
         userId: '603dc5c9bd4b4f45a47197d1', orgId: '603dc5c9bd4b4f45a47197d0',
-        email: 'dev@mailsender.com', role: 'OWNER', userName: 'Dev User', orgName: 'Dev Organization', orgIndustry: 'Technology',
+        email: 'aryan@stellarcommerce.in', role: 'OWNER', userName: 'Aryan Mehta', orgName: 'Stellar Commerce', orgIndustry: 'Technology',
       };
 
       req.session = sessionData;
-      const { setSessionCookie } = await import('./lib/session.js');
       setSessionCookie(res, sessionData);
+      return next();
     } catch (err) {
       const sessionData = {
         userId: '603dc5c9bd4b4f45a47197d1', orgId: '603dc5c9bd4b4f45a47197d0',
-        email: 'dev@mailsender.com', role: 'OWNER', userName: 'Dev User', orgName: 'Dev Organization',
+        email: 'aryan@stellarcommerce.in', role: 'OWNER', userName: 'Aryan Mehta', orgName: 'Stellar Commerce', orgIndustry: 'Technology',
       };
       req.session = sessionData;
-      const { setSessionCookie } = await import('./lib/session.js');
       setSessionCookie(res, sessionData);
+      return next();
     }
-    return next();
   }
 
   res.status(401).json({ error: 'Unauthorized' });
@@ -299,6 +323,7 @@ app.use("/api/assets",     requireAuth, assetRoutes);
 app.use("/api/abtests",    requireAuth, abTestRoutes);
 app.use("/api/customfields", requireAuth, customFieldRoutes);
 app.use("/api/whatsapp",     requireAuth, whatsappRoutes);
+app.use("/apis/v1",          requireAuth, whatsappRoutes);
 // Collaboration — nested under templates
 app.use("/api/templates",  requireAuth, collaborationRoutes);
 // Public webhook (no auth)

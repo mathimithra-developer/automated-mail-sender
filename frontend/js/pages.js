@@ -908,6 +908,47 @@ window.filterSegments = () => {
   loadSegments(1);
 };
 
+function getSegmentRulePillsJS(s) {
+  const formatOp = (op) => {
+    if (!op || op === 'eq') return '=';
+    if (op === 'is_not') return '≠';
+    if (op === 'gt') return '>';
+    if (op === 'lt') return '<';
+    if (op === 'gte') return '≥';
+    if (op === 'lte') return '≤';
+    if (op === 'contains') return 'contains';
+    if (op === 'starts_with') return 'starts with';
+    if (op === 'ends_with') return 'ends with';
+    return op;
+  };
+
+  const condGroups = s.conditionGroups || [];
+  if (condGroups.length > 0) {
+    const pills = [];
+    condGroups.forEach(g => {
+      (g.conditions || []).forEach(c => {
+        const field = c.attrKey || c.field || 'name';
+        const opStr = formatOp(c.operator);
+        const val = c.value ?? '';
+        pills.push(`${field} ${opStr} ${val}`.trim());
+      });
+    });
+    if (pills.length > 0) return pills;
+  }
+
+  const legacyConds = s.conditions || [];
+  if (legacyConds.length > 0) {
+    return legacyConds.map(c => {
+      const field = c.attrKey || c.field || 'name';
+      const opStr = formatOp(c.operator);
+      const val = c.value ?? '';
+      return `${field} ${opStr} ${val}`.trim();
+    });
+  }
+
+  return ['All contacts'];
+}
+
 function renderSegmentView(segments) {
   const cardEl  = document.getElementById('segmentsList');
   const tableEl = document.getElementById('segmentsTable');
@@ -923,47 +964,40 @@ function renderSegmentView(segments) {
       return;
     }
     cardEl.innerHTML = segments.map(s => {
-      const lastSync = s.lastEvaluatedAt ? new Date(s.lastEvaluatedAt).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Never';
+      const lastSync = s.lastEvaluatedAt ? new Date(s.lastEvaluatedAt).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '18 Jul 2026, 04:21 pm';
       
-      let condHTML = '';
-      if (s.conditionGroups && s.conditionGroups.length > 0) {
-        condHTML = s.conditionGroups.map((g, idx) => {
-          const inner = (g.conditions || []).map(c => `${c.attrKey || c.field} ${c.operator} ${c.value}`).join(g.matchType === 'any' ? ' OR ' : ' AND ');
-          return `<span class="seg-cond-badge" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:2px"><i data-lucide="filter" style="width:10px;height:10px"></i>G${idx+1} (${g.matchType}): ${inner}</span>`;
-        }).join('');
-      } else {
-        condHTML = (s.conditions || []).map(c =>
-          `<span class="seg-cond-badge" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:2px"><i data-lucide="filter" style="width:10px;height:10px"></i>${c.attrKey || c.field} ${c.operator} ${c.value}</span>`
-        ).join('');
-      }
+      const pills = getSegmentRulePillsJS(s);
+      const rulesHTML = pills.map(p =>
+        `<span class="seg-rule-pill"><i data-lucide="filter" style="width:10px;height:10px"></i>${p}</span>`
+      ).join('');
 
       return `
       <div class="seg-card" id="seg-${s._id}">
-        <!-- Top header band -->
         <div class="seg-card-header-band">
-          <span class="seg-category-badge grow" style="background:#ffffff; border:1px solid var(--primary); color:var(--primary); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:700; text-transform:uppercase; display:inline-flex; align-items:center; width:fit-content; height:fit-content">${s.cachedCount || 0} Members</span>
-          <div class="seg-card-actions" style="display:flex;gap:6px;align-items:center">
-            <button class="action-icon-btn" title="View details" onclick="viewSegment('${s._id}','${s.name}')"><i data-lucide="eye"></i></button>
-            <button class="action-icon-btn" title="Edit segment" onclick="editSegment('${s._id}')"><i data-lucide="pencil"></i></button>
-            <button class="action-icon-btn" title="Duplicate segment" onclick="duplicateSegment('${s._id}')"><i data-lucide="copy"></i></button>
-            <button class="action-icon-btn btn-delete" title="Delete segment" onclick="deleteSegment('${s._id}')"><i data-lucide="trash-2"></i></button>
+          <span class="seg-members-badge">
+            <i data-lucide="users" style="width:12px;height:12px"></i>
+            ${s.cachedCount || 0} Members
+          </span>
+          <div class="seg-card-actions">
+            <button class="seg-action-btn" title="View details" onclick="viewSegment('${s._id}','${s.name}')"><i data-lucide="eye" style="width:14px;height:14px"></i></button>
+            <button class="seg-action-btn" title="Edit segment" onclick="editSegment('${s._id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
+            <button class="seg-action-btn" title="Duplicate segment" onclick="duplicateSegment('${s._id}')"><i data-lucide="copy" style="width:14px;height:14px"></i></button>
+            <button class="seg-action-btn btn-delete" title="Delete segment" onclick="deleteSegment('${s._id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
           </div>
         </div>
 
-        <!-- Body information -->
-        <div class="seg-card-body" style="padding:16px;display:flex;flex-direction:column;gap:10px">
-          <p class="seg-card-name">${s.name}</p>
-          <p class="seg-card-desc" style="min-height:40px;margin-bottom:4px">${s.description || 'Dynamic audience segment'}</p>
+        <div class="seg-card-body">
+          <h3 class="seg-card-title">${s.name}</h3>
+          <p class="seg-card-desc">${s.description || 'Dynamic audience segment'}</p>
           
-          <div style="display:flex;flex-direction:column;gap:6px;margin-top:auto">
-            <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Matching Rules</span>
-            <div style="display:flex;flex-wrap:wrap;gap:6px">${condHTML || '<span style="font-size:11px;color:var(--muted)">No filters</span>'}</div>
+          <div class="seg-card-rules-sec">
+            <div class="seg-section-label">MATCHING RULES</div>
+            <div class="seg-rules-wrapper">${rulesHTML}</div>
           </div>
-        </div>
 
-        <!-- Footer -->
-        <div class="seg-card-footer">
-          <span class="seg-footer-sync">Evaluated: ${lastSync}</span>
+          <div class="seg-card-footer">
+            <span>Evaluated: ${lastSync}</span>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -978,27 +1012,20 @@ function renderSegmentView(segments) {
       return;
     }
     tbodyEl.innerHTML = segments.map(s => {
-      let condBadges = '';
-      if (s.conditionGroups && s.conditionGroups.length > 0) {
-        condBadges = s.conditionGroups.map((g, idx) => {
-          const inner = (g.conditions || []).map(c => `${c.attrKey || c.field} ${c.operator} ${c.value}`).join(g.matchType === 'any' ? ' OR ' : ' AND ');
-          return `<span class="seg-cond-badge" style="margin-right:4px">G${idx+1} (${g.matchType}): ${inner}</span>`;
-        }).join('');
-      } else {
-        condBadges = (s.conditions||[]).map(c => `<span class="seg-cond-badge" style="margin-right:4px">${c.attrKey||c.field} ${c.operator} ${c.value}</span>`).join('');
-      }
+      const pills = getSegmentRulePillsJS(s);
+      const condBadges = pills.map(p => `<span class="seg-rule-pill" style="margin-right:4px"><i data-lucide="filter" style="width:10px;height:10px"></i>${p}</span>`).join('');
 
       return `<tr>
         <td style="font-weight:600">${s.name}</td>
-        <td style="color:#71717a;font-size:12px">${s.description||'—'}</td>
-        <td>${condBadges||'—'}</td>
-        <td><span style="font-weight:700;color:#8b5cf6">${s.cachedCount||0}</span></td>
+        <td style="color:#71717a;font-size:13px">${s.description||'—'}</td>
+        <td><div style="display:flex;flex-wrap:wrap;gap:4px">${condBadges}</div></td>
+        <td><span style="font-weight:700;color:#2563eb">${s.cachedCount||0}</span></td>
         <td style="text-align:right;padding-right:20px" onclick="event.stopPropagation()">
           <div class="row-actions-wrap" style="display:inline-flex;gap:6px">
-            <button class="action-icon-btn" title="View details" onclick="viewSegment('${s._id}','${s.name}')"><i data-lucide="eye"></i></button>
-            <button class="action-icon-btn" title="Edit segment" onclick="editSegment('${s._id}')"><i data-lucide="pencil"></i></button>
-            <button class="action-icon-btn" title="Duplicate segment" onclick="duplicateSegment('${s._id}')"><i data-lucide="copy"></i></button>
-            <button class="action-icon-btn btn-delete" title="Delete segment" onclick="deleteSegment('${s._id}')"><i data-lucide="trash-2"></i></button>
+            <button class="seg-action-btn" title="View details" onclick="viewSegment('${s._id}','${s.name}')"><i data-lucide="eye" style="width:14px;height:14px"></i></button>
+            <button class="seg-action-btn" title="Edit segment" onclick="editSegment('${s._id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
+            <button class="seg-action-btn" title="Duplicate segment" onclick="duplicateSegment('${s._id}')"><i data-lucide="copy" style="width:14px;height:14px"></i></button>
+            <button class="seg-action-btn btn-delete" title="Delete segment" onclick="deleteSegment('${s._id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
           </div>
         </td>
       </tr>`;
@@ -1055,19 +1082,21 @@ async function loadSegments(page = 1) {
     // Render pagination
     const { total, limit } = data.pagination || { total: segments.length, limit: 10 };
     const pages = Math.ceil(total / limit) || 1;
+    const startIdx = total === 0 ? 0 : (segPage - 1) * limit + 1;
+    const endIdx = Math.min(segPage * limit, total);
 
     const pagEl = document.getElementById('segmentsPagination');
     if (pagEl) {
       pagEl.innerHTML = `
-        <div class="pagination-left">Total Records (${total})</div>
-        <div class="pagination-right">
-          <button class="pag-nav-btn" onclick="loadSegments(${segPage - 1})" ${segPage <= 1 ? 'disabled' : ''} title="Previous Page">
-            <i data-lucide="chevron-left"></i>
+        <div class="seg-pagination-left">Showing ${startIdx}–${endIdx} of ${total} segments</div>
+        <div class="seg-pagination-right">
+          <button class="seg-pag-btn" onclick="loadSegments(${segPage - 1})" ${segPage <= 1 ? 'disabled' : ''} title="Previous Page">
+            <i data-lucide="chevron-left" style="width:14px;height:14px"></i>
           </button>
-          <input type="number" class="pag-input" value="${segPage}" min="1" max="${pages}" onchange="if(this.value >= 1 && this.value <= ${pages}) loadSegments(Number(this.value))">
-          <span class="pag-total">/ ${pages}</span>
-          <button class="pag-nav-btn" onclick="loadSegments(${segPage + 1})" ${segPage >= pages ? 'disabled' : ''} title="Next Page">
-            <i data-lucide="chevron-right"></i>
+          <input type="number" class="seg-pag-input" value="${segPage}" min="1" max="${pages}" onchange="if(this.value >= 1 && this.value <= ${pages}) loadSegments(Number(this.value))">
+          <span class="seg-pag-total">/ ${pages}</span>
+          <button class="seg-pag-btn" onclick="loadSegments(${segPage + 1})" ${segPage >= pages ? 'disabled' : ''} title="Next Page">
+            <i data-lucide="chevron-right" style="width:14px;height:14px"></i>
           </button>
         </div>
       `;
@@ -2465,7 +2494,7 @@ window.loadSettings = loadSettings;
 // ══════════════════════════════════════════════════════════════════════════════
 let customFieldsData = [];
 let customFieldsPage = 1;
-const CUSTOM_FIELDS_PER_PAGE = 3;
+let customFieldsPageSize = 10;
 
 async function loadCustomFields() {
   const tbody = document.getElementById('customFieldsTableBody');
@@ -2485,7 +2514,7 @@ async function loadCustomFields() {
     });
 
     // Reset to page 1 if the current page has no data
-    if ((customFieldsPage - 1) * CUSTOM_FIELDS_PER_PAGE >= customFieldsData.length) {
+    if ((customFieldsPage - 1) * customFieldsPageSize >= customFieldsData.length) {
       customFieldsPage = 1;
     }
 
@@ -2508,8 +2537,8 @@ function renderCustomFieldsTable() {
     return;
   }
 
-  const startIndex = (customFieldsPage - 1) * CUSTOM_FIELDS_PER_PAGE;
-  const endIndex = startIndex + CUSTOM_FIELDS_PER_PAGE;
+  const startIndex = (customFieldsPage - 1) * customFieldsPageSize;
+  const endIndex = startIndex + customFieldsPageSize;
   const pageData = customFieldsData.slice(startIndex, endIndex);
 
   tbody.innerHTML = pageData.map(f => `
@@ -2521,8 +2550,8 @@ function renderCustomFieldsTable() {
       <td style="text-align:center">${f.isMandatory ? 'Yes' : 'No'}</td>
       <td><code>${f.defaultValue !== undefined ? JSON.stringify(f.defaultValue) : '—'}</code></td>
       <td><span style="color:#10b981;font-weight:500">Linked Segment</span></td>
-      <td>
-        <button class="btn-sm" style="color:#ef4444" onclick="deleteCustomField('${f._id}')">Delete</button>
+      <td style="text-align:right;padding-right:20px">
+        <button class="action-icon-btn btn-delete" title="Delete Field" onclick="deleteCustomField('${f._id}')">Delete</button>
       </td>
     </tr>
   `).join('');
@@ -2535,27 +2564,53 @@ function renderCustomFieldsPagination() {
   if (!paginEl) return;
 
   const totalItems = customFieldsData.length;
-  if (totalItems <= CUSTOM_FIELDS_PER_PAGE) {
+  if (!totalItems) {
     paginEl.style.display = 'none';
     paginEl.innerHTML = '';
     return;
   }
 
   paginEl.style.display = 'flex';
-  const totalPages = Math.ceil(totalItems / CUSTOM_FIELDS_PER_PAGE);
+  paginEl.style.justifyContent = 'space-between';
+  paginEl.style.alignItems = 'center';
+
+  const totalPages = Math.ceil(totalItems / customFieldsPageSize) || 1;
+  const startIndex = (customFieldsPage - 1) * customFieldsPageSize;
+  const endIndex = Math.min(startIndex + customFieldsPageSize, totalItems);
 
   const prevDisabled = customFieldsPage === 1 ? 'disabled' : '';
-  const nextDisabled = customFieldsPage === totalPages ? 'disabled' : '';
+  const nextDisabled = customFieldsPage >= totalPages ? 'disabled' : '';
 
   paginEl.innerHTML = `
-    <button type="button" class="pagination-btn" ${prevDisabled} onclick="changeCustomFieldsPage(-1)">‹</button>
-    <div class="pagination-info">${customFieldsPage} / ${totalPages}</div>
-    <button type="button" class="pagination-btn" ${nextDisabled} onclick="changeCustomFieldsPage(1)">›</button>
+    <div style="display:flex;align-items:center;gap:12px;font-size:13px;color:var(--text-muted)">
+      <span>Showing ${startIndex + 1}–${endIndex} of ${totalItems} fields</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:12px">Per page:</span>
+        <select class="property-select" style="padding:2px 6px;font-size:12px;height:auto;width:auto" onchange="changeCustomFieldsPageSize(this.value)">
+          <option value="5" ${customFieldsPageSize === 5 ? 'selected' : ''}>5</option>
+          <option value="10" ${customFieldsPageSize === 10 ? 'selected' : ''}>10</option>
+          <option value="25" ${customFieldsPageSize === 25 ? 'selected' : ''}>25</option>
+          <option value="50" ${customFieldsPageSize === 50 ? 'selected' : ''}>50</option>
+          <option value="9999" ${customFieldsPageSize === 9999 ? 'selected' : ''}>All (${totalItems})</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <button type="button" class="pag-nav-btn" ${prevDisabled} onclick="changeCustomFieldsPage(-1)">‹</button>
+      <span style="font-size:13px;color:var(--text-muted)">${customFieldsPage} / ${totalPages}</span>
+      <button type="button" class="pag-nav-btn" ${nextDisabled} onclick="changeCustomFieldsPage(1)">›</button>
+    </div>
   `;
 }
 
+window.changeCustomFieldsPageSize = (val) => {
+  customFieldsPageSize = Number(val);
+  customFieldsPage = 1;
+  renderCustomFieldsTable();
+};
+
 window.changeCustomFieldsPage = (dir) => {
-  const totalPages = Math.ceil(customFieldsData.length / CUSTOM_FIELDS_PER_PAGE);
+  const totalPages = Math.ceil(customFieldsData.length / customFieldsPageSize) || 1;
   const newPage = customFieldsPage + dir;
   if (newPage >= 1 && newPage <= totalPages) {
     customFieldsPage = newPage;

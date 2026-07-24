@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Plus, Save, Trash2, X, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, Save, Trash2, X, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { CustomField, OrgSettings } from '../types';
 import { api } from '../services/api';
 import { useToast } from '../context/ToastContext';
@@ -13,7 +13,7 @@ export const SettingsPage: React.FC = () => {
 
   // Pagination for Custom Fields
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(10);
 
   const [provider, setProvider] = useState('ses');
   const [senderName, setSenderName] = useState('Acme Corp');
@@ -174,12 +174,9 @@ export const SettingsPage: React.FC = () => {
   return (
     <section className="page active" id="settings">
       <div className="page-header">
-        <div>
-          <p className="breadcrumb">
-            <SettingsIcon style={{ width: 12, height: 12 }} /> Settings
-          </p>
+        <div className="page-header-left">
           <h1 className="page-title">Settings</h1>
-          <p className="page-description">Configure email provider, sender details, and API keys.</p>
+          <p className="page-description">Configure email provider, sender details, custom fields, and API keys.</p>
         </div>
       </div>
 
@@ -199,18 +196,18 @@ export const SettingsPage: React.FC = () => {
             <Plus style={{ width: 14, height: 14 }} /> Add Custom Field
           </button>
         </div>
-        <div style={{ overflow: 'auto' }}>
-          <table className="data-table">
+        <div style={{ maxHeight: 480, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, position: 'relative' }}>
+          <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
-              <tr>
-                <th>Label</th>
-                <th>System Key</th>
-                <th>Data Type</th>
-                <th>Hint</th>
-                <th>Mandatory</th>
-                <th>Default Value</th>
-                <th>Segment Link</th>
-                <th style={{ textAlign: 'right', paddingRight: 20 }}>Action</th>
+              <tr style={{ position: 'sticky', top: 0, zIndex: 10, background: '#F8FAFC' }}>
+                <th style={{ position: 'sticky', top: 0, zIndex: 10, background: '#F8FAFC', borderBottom: '1px solid var(--border)' }}>Label</th>
+                <th style={{ position: 'sticky', top: 0, zIndex: 10, background: '#F8FAFC', borderBottom: '1px solid var(--border)' }}>System Key</th>
+                <th style={{ position: 'sticky', top: 0, zIndex: 10, background: '#F8FAFC', borderBottom: '1px solid var(--border)' }}>Data Type</th>
+                <th style={{ position: 'sticky', top: 0, zIndex: 10, background: '#F8FAFC', borderBottom: '1px solid var(--border)' }}>Hint</th>
+                <th style={{ position: 'sticky', top: 0, zIndex: 10, background: '#F8FAFC', borderBottom: '1px solid var(--border)' }}>Mandatory</th>
+                <th style={{ position: 'sticky', top: 0, zIndex: 10, background: '#F8FAFC', borderBottom: '1px solid var(--border)' }}>Default Value</th>
+                <th style={{ position: 'sticky', top: 0, zIndex: 10, background: '#F8FAFC', borderBottom: '1px solid var(--border)' }}>Segment Link</th>
+                <th style={{ position: 'sticky', top: 0, zIndex: 10, background: '#F8FAFC', borderBottom: '1px solid var(--border)', textAlign: 'right', paddingRight: 20 }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -297,7 +294,9 @@ export const SettingsPage: React.FC = () => {
                 >
                   <option value={5}>5</option>
                   <option value={10}>10</option>
-                  <option value={20}>20</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={9999}>All ({totalFields})</option>
                 </select>
               </div>
             </div>
@@ -561,85 +560,95 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Custom Field Modal */}
+      {/* Add Custom Field Slide-Over Drawer */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <div className="modal-header">
-              <h2 className="modal-title">Add Custom Field</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>
-                <X style={{ width: 16, height: 16 }} />
+        <div className="drawer-overlay active" style={{ display: 'block' }} onClick={() => setShowModal(false)}>
+          <div className="drawer-card" onClick={(e) => e.stopPropagation()}>
+            <div className="drawer-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button type="button" className="drawer-back" onClick={() => setShowModal(false)}>
+                  <ArrowLeft style={{ width: 18, height: 18 }} />
+                </button>
+                <h2 className="drawer-title">Add Custom Field</h2>
+              </div>
+              <button type="button" className="drawer-close" onClick={() => setShowModal(false)}>
+                <X style={{ width: 18, height: 18 }} />
               </button>
             </div>
-            <form onSubmit={handleAddCustomField}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Field Label</label>
-                  <input
-                    type="text"
-                    className="property-input"
-                    required
-                    placeholder="e.g., Company Size"
-                    value={fieldLabel}
-                    onChange={(e) => {
-                      setFieldLabel(e.target.value);
-                      if (!fieldKey) {
-                        setFieldKey(e.target.value.toLowerCase().replace(/\s+/g, '_'));
-                      }
-                    }}
-                  />
-                </div>
+            <form onSubmit={handleAddCustomField} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', margin: 0 }}>
+              <div className="drawer-body">
+                <div className="drawer-section">
+                  <h3 className="drawer-section-title">FIELD PROPERTIES</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="form-group">
+                      <label className="form-label">FIELD LABEL *</label>
+                      <input
+                        type="text"
+                        className="property-input"
+                        required
+                        placeholder="e.g., Company Size"
+                        value={fieldLabel}
+                        onChange={(e) => {
+                          setFieldLabel(e.target.value);
+                          if (!fieldKey) {
+                            setFieldKey(e.target.value.toLowerCase().replace(/\s+/g, '_'));
+                          }
+                        }}
+                      />
+                    </div>
 
-                <div className="form-group">
-                  <label className="form-label">System Key</label>
-                  <input
-                    type="text"
-                    className="property-input"
-                    required
-                    placeholder="e.g., company_size"
-                    value={fieldKey}
-                    onChange={(e) => setFieldKey(e.target.value)}
-                  />
-                </div>
+                    <div className="form-group">
+                      <label className="form-label">SYSTEM KEY *</label>
+                      <input
+                        type="text"
+                        className="property-input"
+                        required
+                        placeholder="e.g., company_size"
+                        value={fieldKey}
+                        onChange={(e) => setFieldKey(e.target.value)}
+                      />
+                    </div>
 
-                <div className="form-group">
-                  <label className="form-label">Data Type</label>
-                  <select
-                    className="property-select"
-                    value={fieldType}
-                    onChange={(e) => setFieldType(e.target.value)}
-                  >
-                    <option value="text">String / Text</option>
-                    <option value="number">Number</option>
-                    <option value="date">Date</option>
-                  </select>
-                </div>
+                    <div className="form-group">
+                      <label className="form-label">DATA TYPE</label>
+                      <select
+                        className="property-select"
+                        value={fieldType}
+                        onChange={(e) => setFieldType(e.target.value)}
+                      >
+                        <option value="text">String / Text</option>
+                        <option value="number">Number</option>
+                        <option value="date">Date</option>
+                      </select>
+                    </div>
 
-                <div className="form-group">
-                  <label className="form-label">Hint Description</label>
-                  <input
-                    type="text"
-                    className="property-input"
-                    placeholder="Optional description"
-                    value={fieldHint}
-                    onChange={(e) => setFieldHint(e.target.value)}
-                  />
-                </div>
+                    <div className="form-group">
+                      <label className="form-label">HINT DESCRIPTION</label>
+                      <input
+                        type="text"
+                        className="property-input"
+                        placeholder="Optional description"
+                        value={fieldHint}
+                        onChange={(e) => setFieldHint(e.target.value)}
+                      />
+                    </div>
 
-                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
-                  <input
-                    type="checkbox"
-                    id="autoCreateSegment"
-                    checked={autoCreateSegment}
-                    onChange={(e) => setAutoCreateSegment(e.target.checked)}
-                    style={{ width: 16, height: 16, cursor: 'pointer' }}
-                  />
-                  <label htmlFor="autoCreateSegment" className="form-label" style={{ marginBottom: 0, cursor: 'pointer', userSelect: 'none' }}>
-                    Auto-create linked segment
-                  </label>
+                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                      <input
+                        type="checkbox"
+                        id="autoCreateSegment"
+                        checked={autoCreateSegment}
+                        onChange={(e) => setAutoCreateSegment(e.target.checked)}
+                        style={{ width: 16, height: 16, cursor: 'pointer' }}
+                      />
+                      <label htmlFor="autoCreateSegment" className="form-label" style={{ marginBottom: 0, cursor: 'pointer', userSelect: 'none' }}>
+                        Auto-create linked segment
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="modal-footer">
+              <div className="drawer-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
                   Cancel
                 </button>

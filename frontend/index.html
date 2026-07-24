@@ -94,13 +94,12 @@
     <!-- ══════════════════ DASHBOARD ══════════════════ -->
     <section id="dashboard" class="page active">
       <div class="page-header">
-        <div>
-          <p class="breadcrumb"><i data-lucide="layout-dashboard" style="width:12px;height:12px"></i> Dashboard</p>
+        <div class="page-header-left">
           <h1 id="welcomeHeader" class="page-title">Welcome back!</h1>
           <p class="page-description">Here's your complete overview for today.</p>
         </div>
         <button class="btn btn-secondary" onclick="loadDashboard()" style="gap:6px">
-          <i data-lucide="refresh-cw"></i> Refresh
+          <i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Refresh
         </button>
       </div>
 
@@ -355,35 +354,36 @@
     <!-- ══════════════════ SEGMENTS ═══════════════════ -->
     <section id="segments" class="page">
       <div class="page-header">
-        <div>
-          <p class="breadcrumb"><i data-lucide="layers" style="width:12px;height:12px"></i>Segments</p>
+        <div class="page-header-left">
           <h1 class="page-title">Segments</h1>
           <p class="page-description">Rule-based dynamic audience groups.</p>
         </div>
         <button class="btn" onclick="showAddSegmentModal()">
-          <i data-lucide="plus"></i>Create Segment
+          <i data-lucide="plus" style="width:16px;height:16px"></i>Create Segment
         </button>
       </div>
 
       <!-- Toolbar -->
-      <div class="toolbar">
-        <div class="search-wrap">
-          <i data-lucide="search"></i>
-          <input id="segmentSearch" type="text" class="search-input" placeholder="Search segments…" oninput="filterSegments()" autocomplete="off">
+      <div class="seg-toolbar">
+        <div class="seg-toolbar-left">
+          <div class="seg-search-wrap">
+            <i data-lucide="search" class="seg-search-icon" style="width:14px;height:14px"></i>
+            <input id="segmentSearch" type="text" class="seg-search-input" placeholder="Search segments…" oninput="filterSegments()" autocomplete="off">
+          </div>
+          <select id="segmentStatusFilter" class="seg-status-select" onchange="filterSegments()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
         </div>
-        <select id="segmentStatusFilter" class="property-select" style="width:130px" onchange="filterSegments()">
-          <option value="">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-        <div class="toolbar-right">
-          <span id="segmentCount">Total Records (0)</span>
-          <div class="view-toggle">
-            <button id="segCardViewBtn" class="view-toggle-btn active" onclick="setSegmentView('card')" title="Card View">
-              <i data-lucide="layout-grid"></i>
+        <div class="seg-toolbar-right">
+          <span id="segmentCount" class="seg-total-count">Total Records (0)</span>
+          <div class="seg-view-toggle">
+            <button id="segCardViewBtn" class="seg-toggle-btn active" onclick="setSegmentView('card')" title="Card View">
+              <i data-lucide="layout-grid" style="width:14px;height:14px"></i>
             </button>
-            <button id="segTableViewBtn" class="view-toggle-btn" onclick="setSegmentView('table')" title="Table View">
-              <i data-lucide="list"></i>
+            <button id="segTableViewBtn" class="seg-toggle-btn" onclick="setSegmentView('table')" title="Table View">
+              <i data-lucide="list" style="width:14px;height:14px"></i>
             </button>
           </div>
         </div>
@@ -404,7 +404,7 @@
           </table>
         </div>
       </div>
-      <div id="segmentsPagination" class="table-pagination"></div>
+      <div id="segmentsPagination" class="seg-pagination"></div>
     </section>
 
 
@@ -743,13 +743,18 @@
             <i data-lucide="plus"></i>Add Custom Field
           </button>
         </div>
-        <div style="overflow:auto">
-          <table class="data-table">
+        <div style="max-height:480px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;position:relative">
+          <table class="data-table" style="width:100%;border-collapse:separate;border-spacing:0">
             <thead>
-              <tr>
-                <th>Label</th><th>System Key</th><th>Data Type</th>
-                <th>Hint</th><th>Mandatory</th><th>Default Value</th>
-                <th>Segment Link</th><th>Action</th>
+              <tr style="position:sticky;top:0;z-index:10;background:#F8FAFC">
+                <th style="position:sticky;top:0;z-index:10;background:#F8FAFC;border-bottom:1px solid var(--border)">Label</th>
+                <th style="position:sticky;top:0;z-index:10;background:#F8FAFC;border-bottom:1px solid var(--border)">System Key</th>
+                <th style="position:sticky;top:0;z-index:10;background:#F8FAFC;border-bottom:1px solid var(--border)">Data Type</th>
+                <th style="position:sticky;top:0;z-index:10;background:#F8FAFC;border-bottom:1px solid var(--border)">Hint</th>
+                <th style="position:sticky;top:0;z-index:10;background:#F8FAFC;border-bottom:1px solid var(--border)">Mandatory</th>
+                <th style="position:sticky;top:0;z-index:10;background:#F8FAFC;border-bottom:1px solid var(--border)">Default Value</th>
+                <th style="position:sticky;top:0;z-index:10;background:#F8FAFC;border-bottom:1px solid var(--border)">Segment Link</th>
+                <th style="position:sticky;top:0;z-index:10;background:#F8FAFC;border-bottom:1px solid var(--border);text-align:right;padding-right:20px">Action</th>
               </tr>
             </thead>
             <tbody id="customFieldsTableBody">
@@ -757,7 +762,7 @@
             </tbody>
           </table>
         </div>
-        <div id="customFieldsPagination" class="pagination-container" style="display:none"></div>
+        <div id="customFieldsPagination" class="seg-pagination" style="display:none;margin-top:12px"></div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">

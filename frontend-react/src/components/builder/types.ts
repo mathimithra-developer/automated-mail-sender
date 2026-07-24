@@ -291,6 +291,22 @@ export interface GlobalTheme {
   textColor: string;
   linkColor: string;
   buttonColor: string;
+
+  // Page Background (Entire Workspace)
+  pageBackgroundColor?: string;
+  pageBackgroundImage?: string;
+  pageBackgroundRepeat?: 'no-repeat' | 'repeat' | 'repeat-x' | 'repeat-y';
+  pageBackgroundSize?: 'cover' | 'contain' | 'auto';
+  pageBackgroundPosition?: string;
+  pageBackgroundOpacity?: number;
+
+  // Email Body Canvas
+  bodyBackgroundColor?: string;
+  bodyBackgroundImage?: string;
+  bodyWidth?: number;
+  bodyPadding?: number;
+  bodyBorderRadius?: number;
+  bodyShadow?: string;
 }
 
 export interface ColumnData {

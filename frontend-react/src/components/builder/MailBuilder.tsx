@@ -2,7 +2,7 @@ import React, { useReducer, useState, useEffect } from 'react';
 import { builderReducer, initialBuilderState } from './builderReducer';
 import { Section } from './Section';
 import { ExportModal } from './ExportModal';
-import { GlobalThemePanel } from './GlobalThemePanel';
+import { TemplatesPanel } from './TemplatesPanel';
 import { AIPanel } from './AIPanel';
 import { VersionHistoryPanel } from './VersionHistoryPanel';
 import { SectionProperties } from './properties/SectionProperties';
@@ -42,10 +42,11 @@ import {
   Download,
   Upload,
   Monitor,
+  Tablet,
   Smartphone,
+  ZoomIn,
   Layout,
   Type,
-  Palette,
   Sparkles,
   History,
   Columns,
@@ -70,6 +71,11 @@ import {
   QrCode,
   BarChart2,
   GitMerge,
+  Settings,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  FilePlus,
 } from 'lucide-react';
 
 interface MailBuilderProps {
@@ -82,13 +88,18 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
   const { past, present, future, selectedId, hasUnsavedChanges, saveStatus } = state;
 
   // Local UI Modes
-  const [activeRightTab, setActiveRightTab] = useState<'properties' | 'theme' | 'ai' | 'history'>('properties');
-  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
+  const [activeRightTab, setActiveRightTab] = useState<'properties' | 'templates' | 'ai' | 'history'>('properties');
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('mobile');
+  const [zoomScale, setZoomScale] = useState<number>(1);
+  const [showLeftSidebar, setShowLeftSidebar] = useState<boolean>(false);
+  const [showRightSidebar, setShowRightSidebar] = useState<boolean>(false);
   const [exportModal, setExportModal] = useState<{ isOpen: boolean; mode: 'html' | 'json' | 'import' }>({
     isOpen: false,
     mode: 'html',
   });
   const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
+  const [isNewConfirmOpen, setIsNewConfirmOpen] = useState(false);
+  const [isCatalogCollapsed, setIsCatalogCollapsed] = useState<boolean>(false);
   const [templateId, setTemplateId] = useState<string | undefined>(initialTemplateId);
 
   // Load existing template if ID passed
@@ -124,6 +135,18 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
     return () => clearTimeout(timer);
   }, [present, hasUnsavedChanges]);
 
+  // Auto-scroll canvas smoothly to newly added or selected block/section
+  useEffect(() => {
+    if (!selectedId?.id) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`builder-item-${selectedId.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [selectedId?.id]);
+
   // Save to Backend API
   const handleSaveToServer = async () => {
     try {
@@ -148,6 +171,21 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
     } catch (err: any) {
       showToast('Save Error', err.message || 'Failed to save template', 'error');
     }
+  };
+
+  // Reset/New Template logic
+  const handleNewTemplate = () => {
+    if (present.sections.length > 0) {
+      setIsNewConfirmOpen(true);
+    } else {
+      executeResetTemplate();
+    }
+  };
+
+  const executeResetTemplate = () => {
+    dispatch({ type: 'RESET_TEMPLATE' });
+    setTemplateId(undefined);
+    showToast('New Template', 'Created a new blank template', 'info');
   };
 
   // Find currently selected block/section/column
@@ -193,20 +231,9 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
       }}
     >
       {/* ── 1. Top Builder Header Toolbar ────────────────────────────── */}
-      <header
-        style={{
-          height: 54,
-          padding: '0 20px',
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexShrink: 0,
-        }}
-      >
+      <header className="builder-header">
         {/* Template Title & Status Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <input
             type="text"
             value={present.name}
@@ -222,6 +249,31 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
               borderRadius: 4,
             }}
           />
+          {/* Mobile Sidebars Toggles */}
+          <button
+            type="button"
+            className={`mobile-builder-toggle ${showLeftSidebar ? 'active' : ''}`}
+            onClick={() => {
+              setShowLeftSidebar(!showLeftSidebar);
+              setShowRightSidebar(false);
+            }}
+            title="Toggle catalog blocks sidebar"
+          >
+            <Layout size={14} />
+            <span>Blocks</span>
+          </button>
+          <button
+            type="button"
+            className={`mobile-builder-toggle ${showRightSidebar ? 'active' : ''}`}
+            onClick={() => {
+              setShowRightSidebar(!showRightSidebar);
+              setShowLeftSidebar(false);
+            }}
+            title="Toggle builder properties sidebar"
+          >
+            <Settings size={14} />
+            <span>Properties</span>
+          </button>
           {/* Status Badge */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600 }}>
             {saveStatus === 'saved' && (
@@ -244,28 +296,11 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
 
         {/* Action Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Preview Device Toggle */}
+          {/* Mobile Device Preview Toggle */}
           <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 6, padding: 2 }}>
             <button
               type="button"
-              onClick={() => setPreviewMode('desktop')}
-              style={{
-                border: 'none',
-                background: previewMode === 'desktop' ? '#ffffff' : 'transparent',
-                color: previewMode === 'desktop' ? '#2563eb' : '#64748b',
-                padding: '5px 10px',
-                borderRadius: 4,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              title="Desktop preview"
-            >
-              <Monitor size={15} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setPreviewMode('mobile')}
+              onClick={() => setPreviewMode((prev) => (prev === 'mobile' ? 'desktop' : 'mobile'))}
               style={{
                 border: 'none',
                 background: previewMode === 'mobile' ? '#ffffff' : 'transparent',
@@ -276,10 +311,34 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
                 display: 'flex',
                 alignItems: 'center',
               }}
-              title="Mobile preview"
+              title={previewMode === 'mobile' ? 'Mobile view active (375px)' : 'Switch to Mobile preview (375px)'}
             >
               <Smartphone size={15} />
             </button>
+          </div>
+
+          {/* Zoom Level Control */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f1f5f9', borderRadius: 6, padding: '2px 6px' }}>
+            <ZoomIn size={14} style={{ color: '#64748b' }} />
+            <select
+              value={zoomScale}
+              onChange={(e) => setZoomScale(parseFloat(e.target.value))}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                fontSize: 12,
+                fontWeight: 600,
+                color: '#334155',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              <option value={0.5}>50% Zoom</option>
+              <option value={0.75}>75% Zoom</option>
+              <option value={1}>100% Zoom</option>
+              <option value={1.25}>125% Zoom</option>
+              <option value={1.5}>150% Zoom</option>
+            </select>
           </div>
 
           <div style={{ width: 1, height: 20, background: '#e2e8f0' }} />
@@ -391,6 +450,27 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
             <Upload size={14} /> Import
           </button>
 
+          <button
+            type="button"
+            onClick={handleNewTemplate}
+            style={{
+              border: '1px solid #cbd5e1',
+              background: '#ffffff',
+              color: '#0f172a',
+              padding: '6px 10px',
+              borderRadius: 6,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+            title="Start a new blank template"
+          >
+            <FilePlus size={14} /> New Template
+          </button>
+
           <div style={{ width: 1, height: 20, background: '#e2e8f0' }} />
 
           {/* Save & Discard */}
@@ -442,50 +522,77 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
       {/* ── 2. Middle Body: Catalog + Canvas + Properties ───────────── */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* ── Left Sidebar Catalog (LAYOUT + CONTENT + ADVANCED) ── */}
-        <div
-          style={{
-            width: 290,
-            background: '#ffffff',
-            borderRight: '1px solid #e2e8f0',
-            display: 'flex',
-            flexDirection: 'column',
-            flexShrink: 0,
-          }}
-        >
+        <div className={`builder-left-sidebar ${showLeftSidebar ? 'open' : ''} ${isCatalogCollapsed ? 'collapsed' : ''}`}>
+          {/* Top Panel Global Collapse/Expand Header */}
+          <div
+            style={{
+              padding: isCatalogCollapsed ? '12px 8px' : '12px 16px',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isCatalogCollapsed ? 'center' : 'space-between',
+              background: '#ffffff',
+              transition: 'padding 0.25s ease',
+            }}
+          >
+            {!isCatalogCollapsed && (
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                Block Catalog
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsCatalogCollapsed((prev) => !prev)}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '2px 6px',
+                borderRadius: 4,
+                fontSize: 12,
+                fontWeight: 700,
+                transition: 'background-color 0.15s',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              title={isCatalogCollapsed ? 'Expand Catalog' : 'Collapse Catalog'}
+            >
+              {isCatalogCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            </button>
+          </div>
+
           <div className="builder-sidebar-scroll" style={{ padding: '16px 16px 40px 16px', flex: 1, overflowY: 'auto' }}>
             {/* LAYOUT SECTIONS */}
             <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#2563eb', margin: '0 0 10px 0' }}>
               Layout Structure
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 20 }}>
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'ADD_SECTION', columnsCount: 1 })}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
-              >
-                <Columns size={16} style={{ color: '#2563eb' }} />
-                <span>1 Column</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'ADD_SECTION', columnsCount: 2 })}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
-              >
-                <Columns2 size={16} style={{ color: '#2563eb' }} />
-                <span>2 Columns</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'ADD_SECTION', columnsCount: 3 })}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
-              >
-                <Columns3 size={16} style={{ color: '#2563eb' }} />
-                <span>3 Columns</span>
-              </button>
+              {[1, 2, 3].map((cols) => (
+                <button
+                  key={`layout-cols-${cols}`}
+                  type="button"
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'section', columnsCount: cols }));
+                  }}
+                  onClick={() => dispatch({ type: 'ADD_SECTION', columnsCount: cols })}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, fontWeight: 600, cursor: 'grab' }}
+                >
+                  {cols === 1 && <Columns size={16} style={{ color: '#2563eb' }} />}
+                  {cols === 2 && <Columns2 size={16} style={{ color: '#2563eb' }} />}
+                  {cols === 3 && <Columns3 size={16} style={{ color: '#2563eb' }} />}
+                  <span>{cols} {cols === 1 ? 'Column' : 'Columns'}</span>
+                </button>
+              ))}
             </div>
 
             {/* CONTENT SECTION */}
-            <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', margin: '0 0 10px 0' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', margin: '16px 0 10px 0' }}>
               Content Blocks
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 20 }}>
@@ -504,19 +611,25 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
                 <button
                   key={`basic-${item.type}-${idx}`}
                   type="button"
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'block', blockType: item.type }));
+                  }}
                   onClick={() => {
                     if (present.sections.length === 0) {
                       dispatch({ type: 'ADD_SECTION', columnsCount: 1 });
                     }
-                    const sec = present.sections[0] || { id: 'sec_1', columns: [{ id: 'col_1' }] };
-                    dispatch({
-                      type: 'ADD_BLOCK',
-                      sectionId: sec.id,
-                      columnId: sec.columns[0]?.id || 'col_1',
-                      blockType: item.type as any,
-                    });
+                    const targetSec = present.sections[present.sections.length - 1] || present.sections[0];
+                    if (targetSec) {
+                      dispatch({
+                        type: 'ADD_BLOCK',
+                        sectionId: targetSec.id,
+                        columnId: targetSec.columns[0]?.id || 'col_1',
+                        blockType: item.type as any,
+                      });
+                    }
                   }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, fontWeight: 600, cursor: 'grab' }}
                 >
                   <div style={{ width: 26, height: 26, borderRadius: 6, background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {item.icon}
@@ -527,7 +640,7 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
             </div>
 
             {/* ADVANCED SECTION */}
-            <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#8b5cf6', margin: '0 0 10px 0' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#8b5cf6', margin: '16px 0 10px 0' }}>
               Advanced & Commerce
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -546,19 +659,25 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
                 <button
                   key={`adv-${item.type}-${idx}`}
                   type="button"
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'block', blockType: item.type }));
+                  }}
                   onClick={() => {
                     if (present.sections.length === 0) {
                       dispatch({ type: 'ADD_SECTION', columnsCount: 1 });
                     }
-                    const sec = present.sections[0] || { id: 'sec_1', columns: [{ id: 'col_1' }] };
-                    dispatch({
-                      type: 'ADD_BLOCK',
-                      sectionId: sec.id,
-                      columnId: sec.columns[0]?.id || 'col_1',
-                      blockType: item.type as any,
-                    });
+                    const targetSec = present.sections[present.sections.length - 1] || present.sections[0];
+                    if (targetSec) {
+                      dispatch({
+                        type: 'ADD_BLOCK',
+                        sectionId: targetSec.id,
+                        columnId: targetSec.columns[0]?.id || 'col_1',
+                        blockType: item.type as any,
+                      });
+                    }
                   }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: 11, fontWeight: 600, cursor: 'grab' }}
                 >
                   <div style={{ width: 26, height: 26, borderRadius: 6, background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {item.icon}
@@ -571,79 +690,101 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
         </div>
 
         {/* ── Central Email Canvas ───────────────────────────────────── */}
-        <div
-          className="builder-canvas-scroll"
-          style={{
-            flex: 1,
-            background: present.globalTheme.backgroundColor || '#f4f4f5',
-            overflow: 'hidden',
-            padding: '32px 32px 32px 32px',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-start',
-          }}
-          onClick={() => dispatch({ type: 'SELECT_ITEM', selection: null })}
-        >
-          <div
-            className="builder-center-card"
-            style={{
-              width: '100%',
-              maxWidth: previewMode === 'mobile' ? 375 : 640,
-              maxHeight: 'calc(100vh - 200px)',
-              overflowY: 'auto',
-              background: '#ffffff',
-              borderRadius: 10,
-              boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05)',
-              minHeight: 500,
-              transition: 'max-width 0.2s ease-in-out',
-              boxSizing: 'border-box',
-            }}
-          >
-            {present.sections.length === 0 ? (
+        {(() => {
+          const {
+            pageBackgroundColor = '#f3f4f6',
+            pageBackgroundImage = '',
+            pageBackgroundRepeat = 'no-repeat',
+            pageBackgroundSize = 'cover',
+            pageBackgroundPosition = 'center',
+            pageBackgroundOpacity = 1,
+            bodyBackgroundColor = '#ffffff',
+            bodyBackgroundImage = '',
+            bodyWidth = 600,
+            bodyPadding = 24,
+            bodyBorderRadius = 16,
+            bodyShadow = '0 4px 20px rgba(0,0,0,0.06)',
+          } = present.globalTheme;
+
+          const activeWidth = previewMode === 'mobile' ? 375 : bodyWidth;
+
+          return (
+            <div
+              className="builder-canvas-scroll"
+              style={{
+                flex: 1,
+                backgroundColor: pageBackgroundColor,
+                backgroundImage: pageBackgroundImage ? `url(${pageBackgroundImage})` : 'none',
+                backgroundRepeat: pageBackgroundRepeat,
+                backgroundSize: pageBackgroundSize,
+                backgroundPosition: pageBackgroundPosition,
+                opacity: pageBackgroundOpacity,
+                overflow: 'auto',
+                padding: '32px 24px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'flex-start',
+                transition: 'all 0.2s ease',
+              }}
+              onClick={() => dispatch({ type: 'SELECT_ITEM', selection: null })}
+            >
               <div
+                className="builder-center-card"
                 style={{
-                  textAlign: 'center',
-                  padding: '80px 20px',
-                  color: '#94a3b8',
-                  fontSize: 14,
+                  width: '100%',
+                  maxWidth: activeWidth,
+                  transform: `scale(${zoomScale})`,
+                  transformOrigin: 'top center',
+                  transition: 'transform 0.2s ease, max-width 0.2s ease',
+                  backgroundColor: bodyBackgroundColor,
+                  backgroundImage: bodyBackgroundImage ? `url(${bodyBackgroundImage})` : 'none',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  borderRadius: bodyBorderRadius,
+                  boxShadow: bodyShadow === 'none' ? 'none' : bodyShadow,
+                  padding: `${bodyPadding}px`,
+                  minHeight: 500,
+                  boxSizing: 'border-box',
                 }}
               >
-                Canvas is empty. Click <strong>1 Column</strong> or a component from the left sidebar to start building.
+                {present.sections.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '80px 20px',
+                      color: '#94a3b8',
+                      fontSize: 14,
+                    }}
+                  >
+                    Canvas is empty. Click <strong>1 Column</strong> or a component from the left sidebar to start building.
+                  </div>
+                ) : (
+                  present.sections.map((sec, idx) => (
+                    <Section
+                      key={sec.id ? `${sec.id}-${idx}` : `sec-${idx}`}
+                      section={sec}
+                      selectedId={selectedId}
+                      onSelectSection={() => dispatch({ type: 'SELECT_ITEM', selection: { type: 'section', id: sec.id } })}
+                      onSelectColumn={(colId) => dispatch({ type: 'SELECT_ITEM', selection: { type: 'column', id: colId } })}
+                      onSelectBlock={(blockId) => dispatch({ type: 'SELECT_ITEM', selection: { type: 'block', id: blockId } })}
+                      onUpdateBlock={(blockId, updatedContent) => dispatch({ type: 'UPDATE_BLOCK', blockId, updatedContent })}
+                      onAddBlock={(sectionId, columnId, blockType) => dispatch({ type: 'ADD_BLOCK', sectionId, columnId, blockType })}
+                      onMoveBlock={(blockId, direction) => dispatch({ type: 'MOVE_BLOCK', blockId, direction })}
+                      onDuplicateBlock={(blockId) => dispatch({ type: 'DUPLICATE_BLOCK', blockId })}
+                      onDeleteBlock={(blockId) => dispatch({ type: 'DELETE_BLOCK', blockId })}
+                      onMoveSection={(direction) => dispatch({ type: 'MOVE_SECTION', sectionId: sec.id, direction })}
+                      onDuplicateSection={() => dispatch({ type: 'DUPLICATE_SECTION', sectionId: sec.id })}
+                      onDeleteSection={() => dispatch({ type: 'DELETE_SECTION', sectionId: sec.id })}
+                    />
+                  ))
+                )}
               </div>
-            ) : (
-              present.sections.map((sec, idx) => (
-                <Section
-                  key={sec.id ? `${sec.id}-${idx}` : `sec-${idx}`}
-                  section={sec}
-                  selectedId={selectedId}
-                  onSelectSection={() => dispatch({ type: 'SELECT_ITEM', selection: { type: 'section', id: sec.id } })}
-                  onSelectColumn={(colId) => dispatch({ type: 'SELECT_ITEM', selection: { type: 'column', id: colId } })}
-                  onSelectBlock={(blockId) => dispatch({ type: 'SELECT_ITEM', selection: { type: 'block', id: blockId } })}
-                  onUpdateBlock={(blockId, updatedContent) => dispatch({ type: 'UPDATE_BLOCK', blockId, updatedContent })}
-                  onAddBlock={(sectionId, columnId, blockType) => dispatch({ type: 'ADD_BLOCK', sectionId, columnId, blockType })}
-                  onMoveBlock={(blockId, direction) => dispatch({ type: 'MOVE_BLOCK', blockId, direction })}
-                  onDuplicateBlock={(blockId) => dispatch({ type: 'DUPLICATE_BLOCK', blockId })}
-                  onDeleteBlock={(blockId) => dispatch({ type: 'DELETE_BLOCK', blockId })}
-                  onMoveSection={(direction) => dispatch({ type: 'MOVE_SECTION', sectionId: sec.id, direction })}
-                  onDuplicateSection={() => dispatch({ type: 'DUPLICATE_SECTION', sectionId: sec.id })}
-                  onDeleteSection={() => dispatch({ type: 'DELETE_SECTION', sectionId: sec.id })}
-                />
-              ))
-            )}
-          </div>
-        </div>
+            </div>
+          );
+        })()}
 
         {/* ── Right Sidebar: Multi-Tab Properties & Utilities Panel ──── */}
-        <div
-          style={{
-            width: 320,
-            background: '#ffffff',
-            borderLeft: '1px solid #e2e8f0',
-            display: 'flex',
-            flexDirection: 'column',
-            flexShrink: 0,
-          }}
-        >
+        <div className={`builder-right-sidebar ${showRightSidebar ? 'open' : ''}`}>
           {/* Right Header Navigation Tabs */}
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
             <button
@@ -669,14 +810,14 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
             </button>
             <button
               type="button"
-              onClick={() => setActiveRightTab('theme')}
+              onClick={() => setActiveRightTab('templates')}
               style={{
                 flex: 1,
                 padding: '12px 6px',
                 border: 'none',
-                background: activeRightTab === 'theme' ? '#ffffff' : 'transparent',
-                borderBottom: activeRightTab === 'theme' ? '2px solid #2563eb' : 'none',
-                color: activeRightTab === 'theme' ? '#2563eb' : '#64748b',
+                background: activeRightTab === 'templates' ? '#ffffff' : 'transparent',
+                borderBottom: activeRightTab === 'templates' ? '2px solid #2563eb' : 'none',
+                color: activeRightTab === 'templates' ? '#2563eb' : '#64748b',
                 fontWeight: 600,
                 fontSize: 12,
                 cursor: 'pointer',
@@ -686,7 +827,7 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
                 gap: 4,
               }}
             >
-              <Palette size={14} /> Theme
+              <Layout size={14} /> Templates
             </button>
             <button
               type="button"
@@ -781,10 +922,13 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
               </>
             )}
 
-            {activeRightTab === 'theme' && (
-              <GlobalThemePanel
-                theme={present.globalTheme}
-                onUpdateTheme={(theme) => dispatch({ type: 'SET_THEME', theme })}
+            {activeRightTab === 'templates' && (
+              <TemplatesPanel
+                currentTemplateId={templateId}
+                onLoadTemplate={(jsonData, id) => {
+                  dispatch({ type: 'LOAD_TEMPLATE', template: jsonData });
+                  setTemplateId(id);
+                }}
               />
             )}
 
@@ -806,6 +950,17 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
         </div>
       </div>
 
+      {/* Backdrop overlay for Mail Builder drawers on mobile */}
+      {(showLeftSidebar || showRightSidebar) && (
+        <div
+          className="builder-overlay"
+          onClick={() => {
+            setShowLeftSidebar(false);
+            setShowRightSidebar(false);
+          }}
+        />
+      )}
+
       {/* Export / Import Modal */}
       <ExportModal
         isOpen={exportModal.isOpen}
@@ -813,6 +968,17 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
         templateData={present}
         onClose={() => setExportModal((prev) => ({ ...prev, isOpen: false }))}
         onImportJSON={(importedData) => dispatch({ type: 'LOAD_TEMPLATE', template: importedData })}
+      />
+
+      {/* Start New Template Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={isNewConfirmOpen}
+        title="Start New Blank Template"
+        message="Start a new blank template? Unsaved changes will be lost."
+        confirmLabel="New Template"
+        variant="danger"
+        onConfirm={executeResetTemplate}
+        onCancel={() => setIsNewConfirmOpen(false)}
       />
 
       {/* Discard Draft Confirm Dialog */}

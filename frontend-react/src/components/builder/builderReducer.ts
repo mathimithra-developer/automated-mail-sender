@@ -29,6 +29,7 @@ export type BuilderAction =
   | { type: 'SELECT_ITEM'; selection: BuilderState['selectedId'] }
   | { type: 'MARK_SAVED' }
   | { type: 'MARK_AUTOSAVED' }
+  | { type: 'RESET_TEMPLATE' }
   | { type: 'UNDO' }
   | { type: 'REDO' };
 
@@ -37,10 +38,22 @@ export const initialTemplateData: TemplateData = {
   version: '2.0',
   globalTheme: {
     fontFamily: 'Inter, sans-serif',
-    backgroundColor: '#f4f4f5',
+    backgroundColor: '#f8fafc',
     textColor: '#18181b',
-    linkColor: '#8b5cf6',
-    buttonColor: '#8b5cf6',
+    linkColor: '#2563eb',
+    buttonColor: '#2563eb',
+    pageBackgroundColor: '#f3f4f6',
+    pageBackgroundImage: '',
+    pageBackgroundRepeat: 'no-repeat',
+    pageBackgroundSize: 'cover',
+    pageBackgroundPosition: 'center',
+    pageBackgroundOpacity: 1,
+    bodyBackgroundColor: '#ffffff',
+    bodyBackgroundImage: '',
+    bodyWidth: 600,
+    bodyPadding: 24,
+    bodyBorderRadius: 16,
+    bodyShadow: '0 4px 20px rgba(0,0,0,0.06)',
   },
   variables: [
     { name: 'customer.name', fallback: 'there' },
@@ -169,6 +182,21 @@ export function createBlockInstance(type: BuilderBlock['type']): BuilderBlock {
 
 export function builderReducer(state: BuilderState, action: BuilderAction): BuilderState {
   switch (action.type) {
+    case 'RESET_TEMPLATE':
+      return {
+        ...state,
+        past: [],
+        present: {
+          ...initialTemplateData,
+          name: 'Untitled Template',
+          sections: [],
+        },
+        future: [],
+        selectedId: null,
+        hasUnsavedChanges: false,
+        saveStatus: 'saved',
+      };
+
     case 'UNDO': {
       if (state.past.length === 0) return state;
       const previous = state.past[state.past.length - 1];

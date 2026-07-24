@@ -8,6 +8,7 @@
     "start": "node backend/server.js",
     "dev": "node --watch backend/server.js",
     "dev:react": "cd frontend-react && npm run dev",
+    "dev:all": "node backend/server.js & cd frontend-react && npm run dev",
     "seed": "node backend/seed.js"
   },
   "dependencies": {

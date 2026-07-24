@@ -78,6 +78,7 @@ export const Column: React.FC<ColumnProps> = ({
   onDeleteBlock,
 }) => {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const isSelected = selectedId?.type === 'column' && selectedId.id === column.id;
 
   const colStyle: React.CSSProperties = {
@@ -86,9 +87,40 @@ export const Column: React.FC<ColumnProps> = ({
     backgroundColor: column.styles?.backgroundColor || 'transparent',
     verticalAlign: column.styles?.verticalAlign || 'top',
     boxSizing: 'border-box',
-    border: isSelected ? '1px dashed #3b82f6' : '1px dashed transparent',
+    border: isDragOver ? '2px dashed #2563eb' : isSelected ? '1px dashed #3b82f6' : '1px dashed transparent',
     borderRadius: 6,
-    transition: 'border-color 0.15s',
+    transition: 'border-color 0.15s, background-color 0.15s',
+    background: isDragOver ? 'rgba(37, 99, 235, 0.05)' : 'transparent',
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+    if (!isDragOver) setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    try {
+      const rawData = e.dataTransfer.getData('text/plain');
+      if (rawData) {
+        const parsed = JSON.parse(rawData);
+        if (parsed?.type === 'block' && parsed?.blockType) {
+          onAddBlock(sectionId, column.id, parsed.blockType);
+        }
+      }
+    } catch (err) {
+      // Ignore invalid drag payload
+    }
   };
 
   const renderBlockContent = (comp: BuilderBlock, isCompSelected: boolean, onSelect: () => void, onChange: (updatedContent: any) => void) => {
@@ -144,6 +176,9 @@ export const Column: React.FC<ColumnProps> = ({
         e.stopPropagation();
         onSelectColumn();
       }}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       style={colStyle}
     >
       {column.components.length === 0 ? (

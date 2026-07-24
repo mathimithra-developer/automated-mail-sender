@@ -24,7 +24,7 @@ const getBaseUrl = () => {
 const dispatchedWhatsAppCampaigns = [];
 
 // ── 1. POST /api/whatsapp/upload-csv-headers ─────────────────────────────────
-router.post('/upload-csv-headers', upload.single('file'), async (req, res) => {
+router.post(['/upload-csv-headers', '/upload-csv-get-headers', '/campaign/upload-csv-get-headers', '/apis/v1/campaign/upload-csv-get-headers'], upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No CSV file uploaded. Please upload a CSV file.' });
@@ -34,18 +34,22 @@ router.post('/upload-csv-headers', upload.single('file'), async (req, res) => {
     const lines = csvContent.split(/\r?\n/).filter((l) => l.trim().length > 0);
     const rowCount = Math.max(1, lines.length - 1);
 
+    // Enforce text/csv MIME type for OwnChat API compatibility
+    const fileBlob = new Blob([req.file.buffer], { type: 'text/csv' });
     const formData = new FormData();
-    const fileBlob = new Blob([req.file.buffer], { type: req.file.mimetype || 'text/csv' });
     formData.append('file', fileBlob, req.file.originalname || 'contacts.csv');
 
     const ownChatUrl = `${getBaseUrl()}/apis/v1/campaign/upload-csv-get-headers`;
+    const apiKey = req.headers['ownchat-api-key'] || OWNCHAT_API_KEY;
+    const apiSecret = req.headers['ownchat-api-secret'] || OWNCHAT_API_SECRET;
+
     let ownChatRes = null;
     try {
       ownChatRes = await fetch(ownChatUrl, {
         method: 'POST',
         headers: {
-          'OWNCHAT-API-KEY': OWNCHAT_API_KEY,
-          'OWNCHAT-API-SECRET': OWNCHAT_API_SECRET,
+          'OWNCHAT-API-KEY': apiKey,
+          'OWNCHAT-API-SECRET': apiSecret,
         },
         body: formData,
       });
@@ -56,7 +60,9 @@ router.post('/upload-csv-headers', upload.single('file'), async (req, res) => {
     if (ownChatRes && ownChatRes.ok) {
       const data = await ownChatRes.json();
       console.log('✅ OwnChat CSV upload response:', data);
-      return res.json({ ...data, rowCount });
+      if (data && (data.success !== false || data.headers || data.mappingId)) {
+        return res.json({ ...data, rowCount });
+      }
     }
 
     const firstLine = lines[0] || '';
@@ -77,7 +83,8 @@ router.post('/upload-csv-headers', upload.single('file'), async (req, res) => {
     const phoneCol = headers.find((h) => /phone|mobile|contact|num/i.test(h)) || headers[1] || 'phoneNo';
 
     return res.json({
-      csvFileUrl: `${getBaseUrl()}/uploads/${req.file.originalname || 'contacts.csv'}`,
+      success: true,
+      csvFileUrl: '',
       csvFileKey: `csv_key_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       mappingId: `map_${Date.now()}`,
       headers: headers,
@@ -92,8 +99,8 @@ router.post('/upload-csv-headers', upload.single('file'), async (req, res) => {
   }
 });
 
-// ── 2. GET /api/whatsapp/templates ──────────────────────────────────────────
-router.get('/templates', async (req, res) => {
+// ── 2. GET/POST /api/whatsapp/templates ──────────────────────────────────────
+router.all('/templates', async (req, res) => {
   try {
     const pageReq = req.query.page;
     if (pageReq) {
@@ -204,34 +211,60 @@ router.get('/templates', async (req, res) => {
 });
 
 // ── 3. POST /api/whatsapp/trigger-campaign ──────────────────────────────────
-router.post('/trigger-campaign', async (req, res) => {
+router.post(['/trigger-campaign', '/trigger-bulk-s3', '/campaign/trigger-bulk-s3', '/apis/v1/campaign/trigger-bulk-s3'], async (req, res) => {
   try {
-    const { campaignName, templateId, csvFileKey, nameColumn, phoneColumn, templateVariableData, tags, contactCount } = req.body;
+    const body = req.body || {};
 
-    if (!campaignName || !templateId || !csvFileKey || !nameColumn || !phoneColumn) {
-      return res.status(400).json({ error: 'Missing required campaign parameters (campaignName, templateId, csvFileKey, nameColumn, phoneColumn).' });
+    const csvFileKey = body.csvFileKey;
+    const nameColumn = body.systemMapping?.nameColumn || body.nameColumn || 'name';
+    const phoneColumn = body.systemMapping?.phoneColumn || body.phoneColumn || 'phoneNo';
+
+    const systemMapping = {
+      nameColumn,
+      phoneColumn,
+    };
+
+    const campaignName = body.campaignMeta?.name || body.campaignName || body.name;
+    const templateId = body.campaignMeta?.templateId || body.templateId;
+
+    if (!csvFileKey || !templateId || !campaignName) {
+      return res.status(400).json({
+        error: 'Missing required campaign parameters. Please provide csvFileKey, templateId, and campaign name.',
+      });
+    }
+
+    const campaignMeta = {
+      name: campaignName,
+      templateId: templateId,
+      publishMode: body.campaignMeta?.publishMode || body.publishMode || 'now',
+      isRetryEnabled: body.campaignMeta?.isRetryEnabled !== undefined
+        ? body.campaignMeta.isRetryEnabled
+        : (body.isRetryEnabled !== undefined ? body.isRetryEnabled : true),
+      retries: body.campaignMeta?.retries || body.retries || [2],
+      tags: body.campaignMeta?.tags || body.tags || [],
+      templateVariableData: body.campaignMeta?.templateVariableData || body.templateVariableData || [],
+    };
+
+    if (body.campaignMeta?.scheduleAt || body.scheduleAt) {
+      campaignMeta.scheduleAt = body.campaignMeta?.scheduleAt || body.scheduleAt;
     }
 
     const payload = {
       csvFileKey: csvFileKey,
-      systemMapping: {
-        nameColumn: nameColumn,
-        phoneColumn: phoneColumn,
-      },
-      campaignMeta: {
-        name: campaignName,
-        templateId: templateId,
-        publishMode: 'now',
-        country: 'IN',
-        countryCode: '91',
-        tags: tags || [],
-        templateVariableData: templateVariableData || [],
-      },
+      systemMapping: systemMapping,
+      campaignMeta: campaignMeta,
+      campaignName: campaignName,
+      templateId: templateId,
+      nameColumn: nameColumn,
+      phoneColumn: phoneColumn,
     };
 
     console.log('🚀 Triggering WhatsApp campaign via OwnChat with payload:', JSON.stringify(payload, null, 2));
 
     const ownChatUrl = `${getBaseUrl()}/apis/v1/campaign/trigger-bulk-s3`;
+    const apiKey = req.headers['ownchat-api-key'] || OWNCHAT_API_KEY;
+    const apiSecret = req.headers['ownchat-api-secret'] || OWNCHAT_API_SECRET;
+
     let ownChatRes = null;
     let responseData = null;
 
@@ -239,8 +272,8 @@ router.post('/trigger-campaign', async (req, res) => {
       ownChatRes = await fetch(ownChatUrl, {
         method: 'POST',
         headers: {
-          'OWNCHAT-API-KEY': OWNCHAT_API_KEY,
-          'OWNCHAT-API-SECRET': OWNCHAT_API_SECRET,
+          'OWNCHAT-API-KEY': apiKey,
+          'OWNCHAT-API-SECRET': apiSecret,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
@@ -257,18 +290,18 @@ router.post('/trigger-campaign', async (req, res) => {
       console.warn('⚠️ OwnChat server unreachable. Simulating campaign trigger:', netErr.message);
     }
 
-    const actualCount = contactCount || 4;
+    const actualCount = body.contactCount || 4;
 
     const newCampRecord = {
-      _id: responseData?._id || responseData?.campaignId || `wa_camp_${Date.now()}`,
-      name: campaignName,
-      templateId,
+      _id: responseData?.campaignId || responseData?._id || `wa_camp_${Date.now()}`,
+      name: campaignMeta.name,
+      templateId: campaignMeta.templateId,
       status: 'completed',
       type: 'whatsapp',
       csvFileKey,
-      nameColumn,
-      phoneColumn,
-      tags: tags || [],
+      nameColumn: systemMapping.nameColumn,
+      phoneColumn: systemMapping.phoneColumn,
+      tags: campaignMeta.tags || [],
       createdAt: new Date().toISOString(),
       stats: responseData?.stats || {
         total: actualCount,
@@ -291,17 +324,20 @@ router.post('/trigger-campaign', async (req, res) => {
   }
 });
 
-// ── 4. GET /api/whatsapp/campaigns ──────────────────────────────────────────
-router.get('/campaigns', async (req, res) => {
+// ── 4. GET/POST /api/whatsapp/campaigns ──────────────────────────────────────
+router.all('/campaigns', async (req, res) => {
   try {
     const ownChatUrl = `${getBaseUrl()}/apis/v1/campaign/bulk-csv/get-all?page=1&limit=30`;
+    const apiKey = req.headers['ownchat-api-key'] || OWNCHAT_API_KEY;
+    const apiSecret = req.headers['ownchat-api-secret'] || OWNCHAT_API_SECRET;
+
     let ownChatRes = null;
     try {
       ownChatRes = await fetch(ownChatUrl, {
         method: 'POST',
         headers: {
-          'OWNCHAT-API-KEY': OWNCHAT_API_KEY,
-          'OWNCHAT-API-SECRET': OWNCHAT_API_SECRET,
+          'OWNCHAT-API-KEY': apiKey,
+          'OWNCHAT-API-SECRET': apiSecret,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -316,7 +352,11 @@ router.get('/campaigns', async (req, res) => {
 
     if (ownChatRes && ownChatRes.ok) {
       const data = await ownChatRes.json();
-      const rawList = Array.isArray(data?.campaigns)
+      const rawList = Array.isArray(data?.data?.bulkUploads)
+        ? data.data.bulkUploads
+        : Array.isArray(data?.bulkUploads)
+        ? data.bulkUploads
+        : Array.isArray(data?.campaigns)
         ? data.campaigns
         : Array.isArray(data?.data)
         ? data.data
@@ -357,17 +397,20 @@ router.get('/campaigns', async (req, res) => {
   }
 });
 
-// ── 5. GET /api/whatsapp/campaigns/count ─────────────────────────────────────
-router.get('/campaigns/count', async (req, res) => {
+// ── 5. GET/POST /api/whatsapp/campaigns/count ────────────────────────────────
+router.all('/campaigns/count', async (req, res) => {
   try {
     const ownChatUrl = `${getBaseUrl()}/apis/v1/campaign/get-over-all-count`;
+    const apiKey = req.headers['ownchat-api-key'] || OWNCHAT_API_KEY;
+    const apiSecret = req.headers['ownchat-api-secret'] || OWNCHAT_API_SECRET;
+
     let ownChatRes = null;
     try {
       ownChatRes = await fetch(ownChatUrl, {
         method: 'POST',
         headers: {
-          'OWNCHAT-API-KEY': OWNCHAT_API_KEY,
-          'OWNCHAT-API-SECRET': OWNCHAT_API_SECRET,
+          'OWNCHAT-API-KEY': apiKey,
+          'OWNCHAT-API-SECRET': apiSecret,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

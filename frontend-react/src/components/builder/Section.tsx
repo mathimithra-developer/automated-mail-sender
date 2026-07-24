@@ -51,6 +51,7 @@ export const Section: React.FC<SectionProps> = ({
 
   return (
     <div
+      id={`builder-item-${section.id}`}
       onClick={(e) => {
         e.stopPropagation();
         onSelectSection();
