@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { SectionData, ColumnData, BuilderBlock } from './types';
 import { Column } from './Column';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ArrowUp, ArrowDown, Copy, Trash2, LayoutGrid } from 'lucide-react';
 
 interface SectionProps {
@@ -11,9 +10,12 @@ interface SectionProps {
   onSelectColumn: (columnId: string) => void;
   onSelectBlock: (blockId: string) => void;
   onUpdateBlock: (blockId: string, updatedContent: any) => void;
-  onAddBlock: (sectionId: string, columnId: string, blockType: BuilderBlock['type']) => void;
+  onAddBlock: (sectionId: string, columnId: string, blockType: BuilderBlock['type'], targetIndex?: number) => void;
+  onMoveBlockToColumn?: (blockId: string, targetSectionId: string, targetColumnId: string, targetIndex?: number) => void;
+  onSplitSectionWithBlock?: (sectionId: string, targetColumnId: string, position: 'left' | 'right', blockType?: BuilderBlock['type'], blockId?: string) => void;
   onMoveBlock: (blockId: string, direction: 'up' | 'down') => void;
   onDuplicateBlock: (blockId: string) => void;
+  onToggleLockBlock?: (blockId: string) => void;
   onDeleteBlock: (blockId: string) => void;
   onMoveSection: (direction: 'up' | 'down') => void;
   onDuplicateSection: () => void;
@@ -28,8 +30,11 @@ export const Section: React.FC<SectionProps> = ({
   onSelectBlock,
   onUpdateBlock,
   onAddBlock,
+  onMoveBlockToColumn,
+  onSplitSectionWithBlock,
   onMoveBlock,
   onDuplicateBlock,
+  onToggleLockBlock,
   onDeleteBlock,
   onMoveSection,
   onDuplicateSection,
@@ -79,8 +84,11 @@ export const Section: React.FC<SectionProps> = ({
             onSelectBlock={onSelectBlock}
             onUpdateBlock={onUpdateBlock}
             onAddBlock={onAddBlock}
+            onMoveBlockToColumn={onMoveBlockToColumn}
+            onSplitSectionWithBlock={onSplitSectionWithBlock}
             onMoveBlock={onMoveBlock}
             onDuplicateBlock={onDuplicateBlock}
+            onToggleLockBlock={onToggleLockBlock}
             onDeleteBlock={onDeleteBlock}
           />
         ))}
@@ -148,17 +156,65 @@ export const Section: React.FC<SectionProps> = ({
           </button>
         </div>
       )}
-
-      {/* Delete Section Confirm Dialog */}
-      <ConfirmDialog
-        isOpen={isDeleteConfirmOpen}
-        title="Delete Section"
-        message="Are you sure you want to delete this section and all contained blocks? This action cannot be undone."
-        confirmLabel="Delete Section"
-        variant="danger"
-        onConfirm={onDeleteSection}
-        onCancel={() => setIsDeleteConfirmOpen(false)}
-      />
+      {/* Inline Delete Section Confirmation */}
+      {isDeleteConfirmOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: -38,
+            left: 16,
+            background: '#ffffff',
+            border: '1.5px solid #cbd5e1',
+            borderRadius: 8,
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            padding: '6px 10px',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            width: 220,
+            animation: 'scaleIn 0.1s ease-out',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#0f172a' }}>Delete section?</span>
+          <button
+            type="button"
+            onClick={() => setIsDeleteConfirmOpen(false)}
+            style={{
+              padding: '2px 6px',
+              fontSize: 10,
+              fontWeight: 700,
+              border: '1px solid #cbd5e1',
+              borderRadius: 4,
+              background: '#ffffff',
+              color: '#475569',
+              cursor: 'pointer',
+            }}
+          >
+            No
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsDeleteConfirmOpen(false);
+              onDeleteSection();
+            }}
+            style={{
+              padding: '2px 6px',
+              fontSize: 10,
+              fontWeight: 700,
+              border: 'none',
+              borderRadius: 4,
+              background: '#ef4444',
+              color: '#ffffff',
+              cursor: 'pointer',
+            }}
+          >
+            Yes
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -46,16 +46,19 @@ async function callTogetherAI(prompt, systemInstruction = '') {
 // Generate full email HTML from a prompt
 // ─────────────────────────────────────────────────────────────────────────────
 export async function generateEmailContent(prompt, context = {}) {
-  const system = `You are an expert HTML email designer. 
-Generate clean, responsive, table-based HTML email code. 
+  const system = `You are an expert mobile-first HTML email designer.
+Generate clean, highly responsive, mobile-first HTML email structure.
 Rules:
-- Use inline CSS only (no <style> blocks — most email clients strip them)
-- Max width 600px, centered in a wrapper table
-- Mobile-friendly: single column on small screens
+- Max width 600px, fluid 100% width on mobile screens
+- Single column stacked layout optimized for mobile reading
+- Typography: Headings 24px-32px, Body copy 16px-18px for maximum legibility
+- CTAs: Large, prominent button links with full padding (minimum 12px 24px)
+- Spacing: Clean vertical margins and padding between sections
+- Use standard semantic tags (<h1>-<h6> for headings, <p> for paragraphs, <a style="..."> for button CTAs, <img src="..."> for images, <hr> for dividers)
+- Inline CSS only (no <style> blocks)
 - Use web-safe fonts (Arial, Georgia, Helvetica, sans-serif)
-- Return ONLY the HTML inside <body> — no <!DOCTYPE>, <html>, <head>, or <body> tags
-- Include real, compelling copy based on the prompt
-- Use #8b5cf6 as the primary accent color
+- Accent color: #8b5cf6
+- Return ONLY the HTML body content — no <!DOCTYPE>, <html>, <head>, or <body> wrapper tags
 Context: ${JSON.stringify(context)}`;
 
   const text = await callTogetherAI(prompt, system);

@@ -1,25 +1,29 @@
 import React from 'react';
-import { ArrowUp, ArrowDown, Copy, Trash2, GripVertical } from 'lucide-react';
+import { ArrowUp, ArrowDown, Copy, Trash2, GripVertical, Lock, Unlock } from 'lucide-react';
 
 export interface BlockActionToolbarProps {
   isSelected: boolean;
   isHovered?: boolean;
+  isLocked?: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDuplicate: () => void;
+  onToggleLock?: () => void;
   onDelete: () => void;
 }
 
 export const BlockActionToolbar: React.FC<BlockActionToolbarProps> = ({
   isSelected,
   isHovered,
+  isLocked = false,
   canMoveUp,
   canMoveDown,
   onMoveUp,
   onMoveDown,
   onDuplicate,
+  onToggleLock,
   onDelete,
 }) => {
   if (!isSelected && !isHovered) return null;
@@ -44,7 +48,7 @@ export const BlockActionToolbar: React.FC<BlockActionToolbarProps> = ({
     >
       {/* Drag Handle Icon */}
       <div
-        title="Drag Handle"
+        title={isLocked ? 'Locked Block (Cannot Drag)' : 'Drag Handle'}
         style={{
           width: 24,
           height: 24,
@@ -52,8 +56,8 @@ export const BlockActionToolbar: React.FC<BlockActionToolbarProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#94a3b8',
-          cursor: 'grab',
+          color: isLocked ? '#cbd5e1' : '#94a3b8',
+          cursor: isLocked ? 'not-allowed' : 'grab',
         }}
       >
         <GripVertical size={13} />
@@ -63,19 +67,19 @@ export const BlockActionToolbar: React.FC<BlockActionToolbarProps> = ({
       <button
         type="button"
         onClick={onMoveUp}
-        disabled={!canMoveUp}
-        title="Move Up"
+        disabled={!canMoveUp || isLocked}
+        title={isLocked ? 'Block is locked' : 'Move Up'}
         style={{
           width: 24,
           height: 24,
           borderRadius: '50%',
           border: 'none',
-          background: canMoveUp ? '#eff6ff' : '#f1f5f9',
-          color: canMoveUp ? '#2563eb' : '#cbd5e1',
+          background: canMoveUp && !isLocked ? '#eff6ff' : '#f1f5f9',
+          color: canMoveUp && !isLocked ? '#2563eb' : '#cbd5e1',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          cursor: canMoveUp ? 'pointer' : 'not-allowed',
+          cursor: canMoveUp && !isLocked ? 'pointer' : 'not-allowed',
           transition: 'all 0.15s',
         }}
       >
@@ -86,63 +90,89 @@ export const BlockActionToolbar: React.FC<BlockActionToolbarProps> = ({
       <button
         type="button"
         onClick={onMoveDown}
-        disabled={!canMoveDown}
-        title="Move Down"
+        disabled={!canMoveDown || isLocked}
+        title={isLocked ? 'Block is locked' : 'Move Down'}
         style={{
           width: 24,
           height: 24,
           borderRadius: '50%',
           border: 'none',
-          background: canMoveDown ? '#eff6ff' : '#f1f5f9',
-          color: canMoveDown ? '#2563eb' : '#cbd5e1',
+          background: canMoveDown && !isLocked ? '#eff6ff' : '#f1f5f9',
+          color: canMoveDown && !isLocked ? '#2563eb' : '#cbd5e1',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          cursor: canMoveDown ? 'pointer' : 'not-allowed',
+          cursor: canMoveDown && !isLocked ? 'pointer' : 'not-allowed',
           transition: 'all 0.15s',
         }}
       >
         <ArrowDown size={13} />
       </button>
 
+      {/* Lock Toggle Button (Functional on EVERY block) */}
+      {onToggleLock && (
+        <button
+          type="button"
+          onClick={onToggleLock}
+          title={isLocked ? 'Click to Unlock Block' : 'Click to Lock Block'}
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            border: 'none',
+            background: isLocked ? '#fef3c7' : '#eff6ff',
+            color: isLocked ? '#d97706' : '#2563eb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}
+        >
+          {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
+        </button>
+      )}
+
       {/* Duplicate */}
       <button
         type="button"
         onClick={onDuplicate}
-        title="Duplicate Block"
+        disabled={isLocked}
+        title={isLocked ? 'Block is locked' : 'Duplicate Block'}
         style={{
           width: 24,
           height: 24,
           borderRadius: '50%',
           border: 'none',
-          background: '#eff6ff',
-          color: '#2563eb',
+          background: isLocked ? '#f1f5f9' : '#eff6ff',
+          color: isLocked ? '#cbd5e1' : '#2563eb',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          cursor: 'pointer',
+          cursor: isLocked ? 'not-allowed' : 'pointer',
           transition: 'all 0.15s',
         }}
       >
         <Copy size={13} />
       </button>
 
-      {/* Delete */}
+      {/* Delete Icon (Fixed & Working on EVERY block) */}
       <button
         type="button"
         onClick={onDelete}
-        title="Delete Block"
+        disabled={isLocked}
+        title={isLocked ? 'Block is locked' : 'Delete Block'}
         style={{
           width: 24,
           height: 24,
           borderRadius: '50%',
           border: 'none',
-          background: '#fef2f2',
-          color: '#dc2626',
+          background: isLocked ? '#f1f5f9' : '#fef2f2',
+          color: isLocked ? '#cbd5e1' : '#dc2626',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          cursor: 'pointer',
+          cursor: isLocked ? 'not-allowed' : 'pointer',
           transition: 'all 0.15s',
         }}
       >

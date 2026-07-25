@@ -2396,7 +2396,7 @@ input:checked + .toggle-slider::before { transform: translateX(18px); }
 }
 
 .builder-right-sidebar {
-  width: 320px;
+  width: 360px;
   background: #ffffff;
   border-left: 1px solid #e2e8f0;
   display: flex;
@@ -3522,5 +3522,26 @@ body:has(.modal-overlay) {
   font-size: 22px;
   font-weight: 800;
   color: var(--primary-dark);
+}
+
+/* Catalog guidance pulse animation */
+@keyframes catalogPulse {
+  0% {
+    box-shadow: 0 0 0 0px rgba(37, 99, 235, 0.4);
+    border-right: 2px solid #2563eb;
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(37, 99, 235, 0.2);
+    border-right: 2px solid #2563eb;
+    background-color: #eff6ff;
+  }
+  100% {
+    box-shadow: 0 0 0 0px rgba(37, 99, 235, 0);
+    border-right: 1px solid #e2e8f0;
+  }
+}
+
+.catalog-highlight-pulse {
+  animation: catalogPulse 1.2s ease-in-out;
 }
 

@@ -1,15 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ParagraphBlockData } from '../types';
+import { TextBlockData } from '../types';
 
-interface ParagraphBlockProps {
-  block: ParagraphBlockData;
+interface TextBlockProps {
+  block: TextBlockData;
   isSelected?: boolean;
   onSelect?: () => void;
-  onChange: (updatedContent: ParagraphBlockData['content']) => void;
-  onDelete?: () => void;
+  onChange: (updatedContent: TextBlockData['content']) => void;
 }
 
-export const ParagraphBlock: React.FC<ParagraphBlockProps> = ({
+export const TextBlock: React.FC<TextBlockProps> = ({
   block,
   onSelect,
   onChange,
@@ -18,29 +17,28 @@ export const ParagraphBlock: React.FC<ParagraphBlockProps> = ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const {
-    text = 'Write your content here...',
-    fontSize = 15,
+    text = 'Enter simple text here...',
+    fontSize = 14,
     color = '#334155',
     align = 'left',
-    lineHeight = 1.6,
     fontFamily = 'inherit',
     fontWeight = '400',
+    lineHeight = 1.5,
   } = block.content;
 
-  const paragraphStyle: React.CSSProperties = {
-    margin: 0,
-    padding: 0,
+  const textStyle: React.CSSProperties = {
     fontSize: `${fontSize}px`,
-    color: color,
+    color,
     textAlign: align,
-    lineHeight: lineHeight,
-    fontFamily: fontFamily,
-    fontWeight: fontWeight,
-    outline: 'none',
-    background: 'transparent',
+    fontFamily,
+    fontWeight,
+    lineHeight,
+    display: 'inline-block',
     width: '100%',
     wordBreak: 'break-word',
     whiteSpace: 'pre-wrap',
+    margin: 0,
+    padding: 0,
   };
 
   useEffect(() => {
@@ -82,7 +80,10 @@ export const ParagraphBlock: React.FC<ParagraphBlockProps> = ({
           onBlur={() => setIsInlineEditing(false)}
           onKeyDown={handleKeyDown}
           style={{
-            ...paragraphStyle,
+            ...textStyle,
+            display: 'block',
+            padding: '4px 6px',
+            outline: 'none',
             border: '1px solid #3b82f6',
             borderRadius: '4px',
             background: '#ffffff',
@@ -92,7 +93,9 @@ export const ParagraphBlock: React.FC<ParagraphBlockProps> = ({
           rows={Math.max(2, text.split('\n').length)}
         />
       ) : (
-        <p style={paragraphStyle}>{text || 'Enter paragraph text...'}</p>
+        <span style={textStyle}>
+          {text || 'Enter simple text here...'}
+        </span>
       )}
     </div>
   );

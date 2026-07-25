@@ -24,6 +24,7 @@ export const HeadingBlock: React.FC<HeadingBlockProps> = ({
     fontWeight = '700',
     color = '#18181b',
     align = 'center',
+    fontFamily = 'inherit',
     letterSpacing = 0,
     lineHeight = 1.3,
   } = block.content;
@@ -41,9 +42,9 @@ export const HeadingBlock: React.FC<HeadingBlockProps> = ({
     textAlign: align,
     letterSpacing: `${letterSpacing}px`,
     lineHeight: lineHeight,
+    fontFamily: fontFamily,
     outline: 'none',
     background: 'transparent',
-    fontFamily: 'inherit',
     width: '100%',
     wordBreak: 'break-word',
   };

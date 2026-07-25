@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TemplateData } from './types';
+import { exportHTML } from './exportHTML';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { Sparkles, FileText, AlertCircle, CheckCircle2, ShieldCheck, Accessibility } from 'lucide-react';
@@ -7,11 +8,13 @@ import { Sparkles, FileText, AlertCircle, CheckCircle2, ShieldCheck, Accessibili
 interface AIPanelProps {
   templateData: TemplateData;
   onLoadGeneratedTemplate: (template: TemplateData) => void;
+  onAppendGeneratedBlock: (html: string) => void;
 }
 
 export const AIPanel: React.FC<AIPanelProps> = ({
   templateData,
   onLoadGeneratedTemplate,
+  onAppendGeneratedBlock,
 }) => {
   const { showToast } = useToast();
   const [prompt, setPrompt] = useState('');
@@ -30,12 +33,18 @@ export const AIPanel: React.FC<AIPanelProps> = ({
     }
     setLoading(true);
     try {
-      const res = await api.post('/api/ai/generate', { prompt });
-      if (res.data && res.data.sections) {
+      const res = await api.post('/api/ai/generate', {
+        prompt,
+        context: { orgName: templateData.name || 'MailFlow' },
+      });
+      if (res && res.html) {
+        onAppendGeneratedBlock(res.html);
+        showToast('Content Generated', 'AI email content generated and appended to canvas.', 'success');
+      } else if (res && res.data && res.data.sections) {
         onLoadGeneratedTemplate(res.data);
         showToast('Template Generated', 'Together AI generated a new email layout.', 'success');
       } else {
-        showToast('Generation complete', 'AI design response ready', 'info');
+        showToast('AI Error', 'No HTML content returned from AI generation.', 'error');
       }
     } catch (err: any) {
       showToast('AI Error', err.message || 'Failed to generate design', 'error');
@@ -48,15 +57,20 @@ export const AIPanel: React.FC<AIPanelProps> = ({
   const handleGenerateSubjects = async () => {
     setLoading(true);
     try {
+      const htmlContent = exportHTML(templateData);
       const res = await api.post('/api/ai/subject-lines', {
-        templateName: templateData.name,
-        prompt: prompt || 'Email marketing newsletter',
+        html: htmlContent,
+        campaignName: templateData.name || 'Email Marketing Campaign',
       });
-      setSubjectLines(res.data?.subjects || ['🔥 Exclusive Insider Preview', '⚡ Don’t Miss Out: Special Offers Inside', '✨ Your Monthly Product Update']);
-      showToast('Subjects Generated', 'Generated subject line suggestions.', 'success');
+      const lines = res.lines || res.subjects || (res.data && res.data.lines);
+      if (Array.isArray(lines) && lines.length > 0) {
+        setSubjectLines(lines);
+        showToast('Subjects Generated', 'Generated subject line suggestions.', 'success');
+      } else {
+        showToast('AI Error', 'No subject lines returned.', 'error');
+      }
     } catch (err: any) {
-      setSubjectLines(['🔥 Exclusive Insider Preview', '⚡ Don’t Miss Out: Special Offers Inside', '✨ Your Monthly Product Update']);
-      showToast('Subjects Loaded', 'Suggested high-converting subject lines.', 'info');
+      showToast('AI Error', err.message || 'Failed to generate subject lines', 'error');
     } finally {
       setLoading(false);
     }
@@ -66,12 +80,21 @@ export const AIPanel: React.FC<AIPanelProps> = ({
   const handleCheckSpamScore = async () => {
     setLoading(true);
     try {
-      const res = await api.post('/api/ai/analyze', { templateData });
-      setSpamAnalysis(res.data || { score: 98, status: 'PASSED', warnings: ['Avoid ALL CAPS in subject lines'] });
-      showToast('Spam Check Complete', 'Spam deliverability score calculated.', 'success');
+      const htmlContent = exportHTML(templateData);
+      const subject = templateData.metadata?.subject || templateData.name || '';
+      const res = await api.post('/api/ai/analyze', {
+        html: htmlContent,
+        subject,
+      });
+      const analysis = res.analysis || res.data;
+      if (analysis) {
+        setSpamAnalysis(analysis);
+        showToast('Spam Check Complete', 'Spam deliverability score calculated.', 'success');
+      } else {
+        showToast('AI Error', 'No analysis data returned.', 'error');
+      }
     } catch (err: any) {
-      setSpamAnalysis({ score: 95, status: 'PASSED', warnings: ['Ensure text-to-image ratio is balanced'] });
-      showToast('Spam Check Complete', 'Deliverability analysis complete.', 'info');
+      showToast('AI Error', err.message || 'Failed to analyze deliverability', 'error');
     } finally {
       setLoading(false);
     }
@@ -81,12 +104,19 @@ export const AIPanel: React.FC<AIPanelProps> = ({
   const handleCheckAccessibility = async () => {
     setLoading(true);
     try {
-      const res = await api.post('/api/ai/accessibility', { templateData });
-      setAccessibilityResults(res.data || { score: 100, issues: [] });
-      showToast('Accessibility Audit', 'WCAG email standards check complete.', 'success');
+      const htmlContent = exportHTML(templateData);
+      const res = await api.post('/api/ai/accessibility', {
+        html: htmlContent,
+      });
+      const result = res.result || res.data;
+      if (result) {
+        setAccessibilityResults(result);
+        showToast('Accessibility Audit', 'WCAG email standards check complete.', 'success');
+      } else {
+        showToast('AI Error', 'No accessibility audit data returned.', 'error');
+      }
     } catch (err: any) {
-      setAccessibilityResults({ score: 100, issues: ['Ensure all images contain descriptive ALT tags'] });
-      showToast('Audit Complete', 'WCAG standards verified.', 'info');
+      showToast('AI Error', err.message || 'Failed accessibility check', 'error');
     } finally {
       setLoading(false);
     }
@@ -239,13 +269,28 @@ export const AIPanel: React.FC<AIPanelProps> = ({
         <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#166534' }}>
-              Deliverability Score: {spamAnalysis.score}/100
+              Deliverability Score: {spamAnalysis.score !== undefined ? `${spamAnalysis.score}/100` : `${Math.max(0, 100 - (spamAnalysis.spamScore || 0) * 10)}/100`}
             </span>
             <CheckCircle2 size={16} style={{ color: '#16a34a' }} />
           </div>
+          {spamAnalysis.spamLevel && (
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#15803d' }}>
+              Spam Level: <span style={{ textTransform: 'uppercase' }}>{spamAnalysis.spamLevel}</span> ({spamAnalysis.spamScore || 0}/10)
+            </div>
+          )}
           {spamAnalysis.warnings?.map((w: string, i: number) => (
-            <p key={i} style={{ margin: 0, fontSize: 12, color: '#15803d' }}>
+            <p key={`w-${i}`} style={{ margin: 0, fontSize: 12, color: '#15803d' }}>
               • {w}
+            </p>
+          ))}
+          {spamAnalysis.issues?.map((iss: string, i: number) => (
+            <p key={`iss-${i}`} style={{ margin: 0, fontSize: 12, color: '#dc2626' }}>
+              • Issue: {iss}
+            </p>
+          ))}
+          {spamAnalysis.suggestions?.map((sug: string, i: number) => (
+            <p key={`sug-${i}`} style={{ margin: 0, fontSize: 12, color: '#15803d' }}>
+              • Suggestion: {sug}
             </p>
           ))}
         </div>
@@ -256,13 +301,18 @@ export const AIPanel: React.FC<AIPanelProps> = ({
         <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#92400e' }}>
-              WCAG Score: {accessibilityResults.score}/100
+              WCAG Score: {accessibilityResults.score}/100 {accessibilityResults.grade ? `(Grade ${accessibilityResults.grade})` : ''}
             </span>
             <AlertCircle size={16} style={{ color: '#d97706' }} />
           </div>
-          {accessibilityResults.issues?.map((iss: string, i: number) => (
-            <p key={i} style={{ margin: 0, fontSize: 12, color: '#b45309' }}>
-              • {iss}
+          {accessibilityResults.issues?.map((iss: any, i: number) => (
+            <p key={`acc-iss-${i}`} style={{ margin: 0, fontSize: 12, color: '#b45309' }}>
+              • {typeof iss === 'string' ? iss : `${iss.severity ? `[${iss.severity.toUpperCase()}] ` : ''}${iss.description || iss.rule}`}
+            </p>
+          ))}
+          {accessibilityResults.passed?.map((p: string, i: number) => (
+            <p key={`acc-pass-${i}`} style={{ margin: 0, fontSize: 12, color: '#15803d' }}>
+              ✓ Passed: {p}
             </p>
           ))}
         </div>
@@ -270,3 +320,4 @@ export const AIPanel: React.FC<AIPanelProps> = ({
     </div>
   );
 };
+
