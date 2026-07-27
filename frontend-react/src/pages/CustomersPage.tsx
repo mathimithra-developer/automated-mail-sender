@@ -1084,7 +1084,7 @@ export const CustomersPage: React.FC = () => {
                         className="property-input"
                         style={{ height: 40, borderRadius: 8, fontSize: 13 }}
                         required
-                        placeholder="John Doe"
+                        placeholder=""
                         value={addName}
                         onChange={(e) => setAddName(e.target.value)}
                       />
@@ -1095,7 +1095,7 @@ export const CustomersPage: React.FC = () => {
                         type="email"
                         className="property-input"
                         style={{ height: 40, borderRadius: 8, fontSize: 13 }}
-                        placeholder="john@example.com"
+                        placeholder=""
                         value={addEmail}
                         onChange={(e) => setAddEmail(e.target.value)}
                       />
@@ -1107,7 +1107,7 @@ export const CustomersPage: React.FC = () => {
                         className="property-input"
                         style={{ height: 40, borderRadius: 8, fontSize: 13 }}
                         required
-                        placeholder="9876543210"
+                        placeholder=""
                         value={addPhone}
                         onChange={(e) => setAddPhone(e.target.value)}
                       />
@@ -1127,7 +1127,7 @@ export const CustomersPage: React.FC = () => {
                         type="text"
                         className="property-input"
                         style={{ height: 40, borderRadius: 8 }}
-                        placeholder="Acme Ltd"
+                        placeholder=""
                         value={attrCompany}
                         onChange={(e) => setAttrCompany(e.target.value)}
                       />
@@ -1138,7 +1138,7 @@ export const CustomersPage: React.FC = () => {
                         type="text"
                         className="property-input"
                         style={{ height: 40, borderRadius: 8 }}
-                        placeholder="Mumbai"
+                        placeholder=""
                         value={attrCity}
                         onChange={(e) => setAttrCity(e.target.value)}
                       />

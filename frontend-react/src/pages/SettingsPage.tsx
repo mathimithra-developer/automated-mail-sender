@@ -13,7 +13,7 @@ export const SettingsPage: React.FC = () => {
 
   // Pagination for Custom Fields
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(5);
 
   const [provider, setProvider] = useState('ses');
   const [senderName, setSenderName] = useState('Acme Corp');
@@ -281,24 +281,6 @@ export const SettingsPage: React.FC = () => {
               <span>
                 Showing {startIndex + 1}–{endIndex} of {totalFields} fields
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Per page:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="property-select"
-                  style={{ padding: '2px 6px', fontSize: 12, height: 'auto', width: 'auto' }}
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={9999}>All ({totalFields})</option>
-                </select>
-              </div>
             </div>
             <div className="pagination-right">
               <button

@@ -16,6 +16,14 @@ import { ABTestsPage } from './pages/ABTestsPage';
 import { AssetsPage } from './pages/AssetsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
+// Campaign Studio Sub-pages
+import { CampaignDetailsLayout } from './pages/campaigns/CampaignDetailsLayout';
+import { CampaignPerformancePage } from './pages/campaigns/CampaignPerformancePage';
+import { CampaignAnalyticsPage } from './pages/campaigns/CampaignAnalyticsPage';
+import { CampaignCustomerDetailsPage } from './pages/campaigns/CampaignCustomerDetailsPage';
+import { CampaignErrorAnalysisPage } from './pages/campaigns/CampaignErrorAnalysisPage';
+import { CampaignFilteredListPage } from './pages/campaigns/CampaignFilteredListPage';
+
 import './assets/style.css';
 
 export const App: React.FC = () => {
@@ -38,6 +46,20 @@ export const App: React.FC = () => {
               <Route path="/abtests" element={<ABTestsPage />} />
               <Route path="/assets" element={<AssetsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+
+              {/* Campaign Studio — Dedicated Detail Pages */}
+              <Route path="/campaigns/:id" element={<CampaignDetailsLayout />}>
+                <Route index element={<Navigate to="performance" replace />} />
+                <Route path="performance" element={<CampaignPerformancePage />} />
+                <Route path="analytics" element={<CampaignAnalyticsPage />} />
+                <Route path="details" element={<CampaignCustomerDetailsPage />} />
+                <Route path="errors" element={<CampaignErrorAnalysisPage />} />
+              </Route>
+
+              {/* Filtered Customer Status Pages (stand-alone pages outside the detail layout) */}
+              <Route path="/campaigns/:id/:filter" element={<CampaignDetailsLayout />}>
+                <Route index element={<CampaignFilteredListPage />} />
+              </Route>
             </Route>
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

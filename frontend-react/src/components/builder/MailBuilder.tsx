@@ -161,7 +161,7 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
     hasUnsavedRef.current = hasUnsavedChanges;
   }, [hasUnsavedChanges]);
 
-  // Saved Draft Name State for Entry Choice Modal
+  const [activeAddTarget, setActiveAddTarget] = useState<{ sectionId: string; columnId: string } | null>(null);
   const [savedDraftName, setSavedDraftName] = useState<string | null>(() => {
     try {
       const raw = localStorage.getItem('ms_builder_draft');
@@ -1359,7 +1359,7 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
           </div>
 
           {/* Right Tab Content Body */}
-          <div className="builder-properties-scroll" style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="builder-properties-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
             {activeRightTab === 'properties' && (
               <>
                 {selectedBlock ? (

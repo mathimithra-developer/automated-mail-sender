@@ -156,10 +156,11 @@ export interface OrgSettings {
 }
 
 export interface WhatsAppTemplateComponent {
-  type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
+  type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS' | 'CAROUSEL';
   format?: string;
   text?: string;
   buttons?: any[];
+  cards?: any[];
 }
 
 export interface WhatsAppTemplate {

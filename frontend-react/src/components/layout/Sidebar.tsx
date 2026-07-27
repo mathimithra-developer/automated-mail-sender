@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -30,8 +31,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
 }) => {
   const { user, organization, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   return (
     <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isOpenMobile ? 'open' : ''}`} id="sidebar">
@@ -49,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* Integrated 32x32px Header Toggle Button - hidden on mobile via CSS desktop-only-toggle */}
+          {/* Integrated Header Toggle Button */}
           {onToggleCollapse && !isOpenMobile && (
             <button
               type="button"
@@ -174,26 +199,74 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </nav>
 
-      <div className="sidebar-footer">
-        <div className="user-profile" title={`${user?.name || 'User'} (${user?.email || ''})`}>
-          <div id="userAvatar" className="user-avatar">
-            {userInitial}
-          </div>
-          {!isCollapsed && (
-            <div className="user-details">
-              <p id="userNameIndicator" className="user-name">
-                {user?.name || 'User'}
-              </p>
-              <p id="userEmailIndicator" className="user-email">
-                {user?.email || 'email@org.com'}
-              </p>
+      {/* Profile Section Dropdown Refactored Footer */}
+      <div className="sidebar-footer" style={{ position: 'relative' }}>
+        <div ref={dropdownRef} style={{ width: '100%' }}>
+          <button
+            type="button"
+            onClick={() => setShowDropdown(!showDropdown)}
+            className={`profile-trigger-btn ${isCollapsed ? 'collapsed' : ''}`}
+            title="User Profile Menu"
+          >
+            <div id="userAvatar" className="user-avatar">
+              {userInitial}
+            </div>
+            {!isCollapsed && (
+              <>
+                <div className="user-details">
+                  <p id="userNameIndicator" className="user-name">
+                    {user?.name || 'User'}
+                  </p>
+                  <p id="userEmailIndicator" className="user-email">
+                    {user?.email || 'email@org.com'}
+                  </p>
+                </div>
+                <ChevronsUpDown className="profile-trigger-chevron" />
+              </>
+            )}
+          </button>
+
+          {showDropdown && (
+            <div className="profile-dropdown">
+              {/* Dropdown Header */}
+              <div className="profile-dropdown-header">
+                <div className="profile-dropdown-name">
+                  {user?.name || 'User'}
+                </div>
+                <div className="profile-dropdown-email">
+                  {user?.email || 'email@org.com'}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="profile-dropdown-actions">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDropdown(false);
+                    navigate('/settings');
+                  }}
+                  className="profile-dropdown-item"
+                >
+                  <Settings style={{ width: 15, height: 15 }} />
+                  View Profile
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDropdown(false);
+                    logout();
+                  }}
+                  className="profile-dropdown-item logout"
+                >
+                  <LogOut style={{ width: 15, height: 15 }} />
+                  Sign Out
+                </button>
+              </div>
             </div>
           )}
         </div>
-        <button id="logoutBtn" className="logout-btn" onClick={logout} title="Sign Out">
-          <LogOut />
-          {!isCollapsed && <span>Sign Out</span>}
-        </button>
       </div>
     </aside>
   );

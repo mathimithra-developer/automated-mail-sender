@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Send, Plus, X, Trash2, MessageSquare, Upload, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Send, Plus, X, Trash2, MessageSquare, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2, Eye, AlertTriangle, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Campaign, EmailTemplate, Segment, WhatsAppCampaign } from '../types';
 import { api } from '../services/api';
 import { useToast } from '../context/ToastContext';
@@ -8,6 +9,7 @@ import { WhatsAppCampaignModal } from '../components/campaigns/WhatsAppCampaignM
 
 export const CampaignsPage: React.FC = () => {
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [whatsAppCampaigns, setWhatsAppCampaigns] = useState<WhatsAppCampaign[]>([]);
@@ -252,7 +254,7 @@ export const CampaignsPage: React.FC = () => {
             }}
             onClick={() => setShowWhatsAppModal(true)}
           >
-            <MessageSquare style={{ width: 14, height: 14 }} /> Upload WhatsApp CSV
+            <MessageSquare style={{ width: 14, height: 14 }} /> ✅ Create New Campaign
           </button>
           <button className="btn btn-primary" onClick={handleOpenDrawer}>
             <Plus style={{ width: 14, height: 14 }} /> New Campaign
@@ -317,10 +319,12 @@ export const CampaignsPage: React.FC = () => {
 
         return (
           <>
-            <div id="campaignsList" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div id="campaignsList" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {loading ? (
-                <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>
-                  Loading campaigns…
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {[1,2,3].map((i) => (
+                    <div key={i} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 14, padding: '20px 24px', height: 110, animation: 'pulse 1.5s ease-in-out infinite', opacity: 0.7 }} />
+                  ))}
                 </div>
               ) : (
                 <>
@@ -329,313 +333,171 @@ export const CampaignsPage: React.FC = () => {
                       const c = item;
                       const isDraft = c.status === 'draft';
                       const createdDate = c.createdAt
-                        ? new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-                        : '21 Jul 2026';
+                        ? new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : '—';
+                      const sentCount = c.stats?.sent || 0;
+                      const openedCount = c.stats?.opened || 0;
+                      const clickedCount = c.stats?.clicked || 0;
+                      const bouncedCount = c.stats?.bounced || 0;
+                      const deliveryPct = sentCount > 0 ? Math.round(((sentCount - bouncedCount) / sentCount) * 100) : 0;
 
                       return (
                         <div
                           key={c._id ? `${c._id}-${idx}` : `camp-${idx}`}
                           style={{
-                            background: '#ffffff',
-                            border: '1px solid #e2e8f0',
-                            borderLeft: `4px solid ${
-                              c.status === 'completed'
-                                ? '#10b981'
-                                : c.status === 'scheduled'
-                                ? '#2563eb'
-                                : '#f59e0b'
-                            }`,
-                            borderRadius: 12,
+                            background: '#FFFFFF',
+                            border: '1px solid #E2E8F0',
+                            borderLeft: `4px solid ${c.status === 'sent' || c.status === 'completed' ? '#10B981' : c.status === 'scheduled' ? '#2563EB' : '#F59E0B'}`,
+                            borderRadius: 14,
                             padding: '20px 24px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: 16,
-                            flexWrap: 'wrap',
-                            transition: 'all 0.2s ease-in-out',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                            transition: 'box-shadow 0.2s ease',
                           }}
-                          className="hover:shadow-md hover:-translate-y-0.5"
+                          onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)')}
                         >
-                          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flex: 1, minWidth: 260 }}>
-                            <div
-                              style={{
-                                width: 42,
-                                height: 42,
-                                borderRadius: 10,
-                                background: 'rgba(37, 99, 235, 0.08)',
-                                color: '#2563eb',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0,
-                              }}
-                            >
-                              <Send style={{ width: 18, height: 18 }} />
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>{c.name}</span>
-                                <span
-                                  style={{
-                                    padding: '2px 10px',
-                                    borderRadius: 9999,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.04em',
-                                    background:
-                                      c.status === 'completed'
-                                        ? '#dcfce7'
-                                        : c.status === 'scheduled'
-                                        ? '#dbeafe'
-                                        : '#fef3c7',
-                                    color:
-                                      c.status === 'completed'
-                                        ? '#15803d'
-                                        : c.status === 'scheduled'
-                                        ? '#1d4ed8'
-                                        : '#b45309',
-                                  }}
-                                >
-                                  {c.status || 'draft'}
-                                </span>
-                                <span
-                                  style={{
-                                    padding: '2px 8px',
-                                    borderRadius: 9999,
-                                    fontSize: 11,
-                                    fontWeight: 600,
-                                    background: '#f1f5f9',
-                                    color: '#475569',
-                                  }}
-                                >
-                                  Email
-                                </span>
+                          {/* Card Top Row */}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flex: 1, minWidth: 200 }}>
+                              <div style={{ width: 44, height: 44, borderRadius: 10, background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <Send style={{ width: 18, height: 18 }} />
                               </div>
-                              <p style={{ fontSize: 13, color: '#475569', margin: 0 }}>
-                                Subject: {c.subject || 'No subject'}
-                              </p>
-                              <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
-                                Created: {createdDate}
-                              </p>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                                  <span style={{ fontSize: 15.5, fontWeight: 700, color: '#0F172A' }}>{c.name}</span>
+                                  <span style={{ padding: '2px 10px', borderRadius: 9999, fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', background: c.status === 'sent' || c.status === 'completed' ? '#DCFCE7' : c.status === 'scheduled' ? '#DBEAFE' : '#FEF3C7', color: c.status === 'sent' || c.status === 'completed' ? '#15803D' : c.status === 'scheduled' ? '#1D4ED8' : '#B45309' }}>
+                                    {c.status || 'draft'}
+                                  </span>
+                                  <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10.5, fontWeight: 600, background: '#F1F5F9', color: '#475569' }}>Email</span>
+                                </div>
+                                <div style={{ fontSize: 12.5, color: '#64748B', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                  <span>📧 Subject: <strong style={{ color: '#334155' }}>{c.subject || 'No subject'}</strong></span>
+                                  <span>📅 {createdDate}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              {isDraft && (
+                                <button className="btn btn-sm btn-primary" disabled={dispatchingId === c._id} onClick={() => handleSendCampaign(c._id)} style={{ borderRadius: 8, fontSize: 12.5 }}>
+                                  {dispatchingId === c._id ? 'Sending…' : '▶ Send Now'}
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/campaigns/${c._id}`)}
+                                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, background: '#EFF6FF', color: '#2563EB', border: '1.5px solid #BFDBFE', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                              >
+                                <ExternalLink style={{ width: 13, height: 13 }} /> View Details
+                              </button>
+                              <button title="Delete" onClick={() => handleDeleteCampaign(c._id)} style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.15s' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.background = '#FEF2F2'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.background = '#FFFFFF'; }}
+                              ><Trash2 style={{ width: 14, height: 14 }} /></button>
                             </div>
                           </div>
 
-                          {!isDraft ? (
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                              <div style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 8, padding: '6px 14px', textAlign: 'center', minWidth: 70 }}>
-                                <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{c.stats?.sent || 0}</span>
-                                <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Sent</span>
-                              </div>
-                              <div style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 8, padding: '6px 14px', textAlign: 'center', minWidth: 70 }}>
-                                <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#2563eb' }}>{c.stats?.opened || 0}</span>
-                                <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Opened</span>
-                              </div>
-                              <div style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 8, padding: '6px 14px', textAlign: 'center', minWidth: 70 }}>
-                                <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#16a34a' }}>{c.stats?.clicked || 0}</span>
-                                <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Clicked</span>
-                              </div>
-                              <div style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 8, padding: '6px 14px', textAlign: 'center', minWidth: 70 }}>
-                                <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#ef4444' }}>{c.stats?.bounced || 0}</span>
-                                <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Bounced</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                              <span style={{ fontSize: 12, color: '#64748b', fontWeight: 500 }}>0 recipients</span>
-                              <button
-                                className="btn btn-sm btn-primary"
-                                disabled={dispatchingId === c._id}
-                                onClick={() => handleSendCampaign(c._id)}
-                              >
-                                {dispatchingId === c._id ? 'Sending…' : 'Send Now'}
-                              </button>
+                          {/* Stats Row */}
+                          {!isDraft && (
+                            <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+                              {[
+                                { label: 'Sent', value: sentCount, color: '#2563EB', bg: '#DBEAFE', icon: <Send style={{ width: 11, height: 11 }} /> },
+                                { label: 'Opened', value: openedCount, color: '#16A34A', bg: '#DCFCE7', icon: <Eye style={{ width: 11, height: 11 }} /> },
+                                { label: 'Clicked', value: clickedCount, color: '#7C3AED', bg: '#EDE9FE', icon: <CheckCircle2 style={{ width: 11, height: 11 }} /> },
+                                { label: 'Bounced', value: bouncedCount, color: '#EF4444', bg: '#FEF2F2', icon: <AlertTriangle style={{ width: 11, height: 11 }} /> },
+                                { label: 'Delivery %', value: `${deliveryPct}%`, color: '#059669', bg: '#D1FAE5', icon: <CheckCircle2 style={{ width: 11, height: 11 }} /> },
+                              ].map(({ label, value, color, bg, icon }) => (
+                                <div key={label} style={{ background: bg, borderRadius: 8, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                  <span style={{ color }}>{icon}</span>
+                                  <span style={{ fontSize: 12.5, fontWeight: 700, color }}>{value}</span>
+                                  <span style={{ fontSize: 10.5, color, opacity: 0.75, fontWeight: 600 }}>{label}</span>
+                                </div>
+                              ))}
                             </div>
                           )}
-
-                          <button
-                            title="Delete campaign"
-                            onClick={() => handleDeleteCampaign(c._id)}
-                            style={{
-                              width: 34,
-                              height: 34,
-                              borderRadius: 8,
-                              border: '1px solid #e2e8f0',
-                              background: '#ffffff',
-                              color: '#94a3b8',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.color = '#ef4444';
-                              e.currentTarget.style.backgroundColor = '#fef2f2';
-                              e.currentTarget.style.borderColor = '#fee2e2';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.color = '#94a3b8';
-                              e.currentTarget.style.backgroundColor = '#ffffff';
-                              e.currentTarget.style.borderColor = '#e2e8f0';
-                            }}
-                          >
-                            <Trash2 style={{ width: 15, height: 15 }} />
-                          </button>
                         </div>
                       );
                     } else {
+                      // WhatsApp Campaign Card
                       const wc = item;
                       const createdDate = wc.createdAt
-                        ? new Date(wc.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                        ? new Date(wc.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                         : 'Today';
+                      const sentCount = wc.stats?.sent || 0;
+                      const deliveredCount = wc.stats?.delivered || 0;
+                      const readCount = wc.stats?.read || 0;
+                      const failedCount = wc.stats?.failed || 0;
+                      const totalCount = wc.stats?.total || sentCount;
+                      const deliveryPct = totalCount > 0 ? Math.round((deliveredCount / totalCount) * 100) : 0;
 
                       return (
                         <div
                           key={wc._id ? `${wc._id}-${idx}` : `wacamp-${idx}`}
                           style={{
-                            background: '#ffffff',
-                            border: '1px solid #e2e8f0',
-                            borderLeft: '4px solid #2563eb',
-                            borderRadius: 12,
+                            background: '#FFFFFF',
+                            border: '1px solid #E2E8F0',
+                            borderLeft: '4px solid #2563EB',
+                            borderRadius: 14,
                             padding: '20px 24px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: 16,
-                            flexWrap: 'wrap',
-                            transition: 'all 0.2s ease-in-out',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                            transition: 'box-shadow 0.2s ease',
                           }}
-                          className="hover:shadow-md hover:-translate-y-0.5"
+                          onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(37,99,235,0.1)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)')}
                         >
-                          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flex: 1, minWidth: 260 }}>
-                            <div
-                              style={{
-                                width: 42,
-                                height: 42,
-                                borderRadius: 10,
-                                background: 'rgba(37, 99, 235, 0.08)',
-                                color: '#2563eb',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0,
-                              }}
-                            >
-                              <MessageSquare style={{ width: 18, height: 18 }} />
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>{wc.name}</span>
-                                <span
-                                  style={{
-                                    padding: '2px 10px',
-                                    borderRadius: 9999,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.04em',
-                                    background: '#e0e7ff',
-                                    color: '#3730a3',
-                                  }}
-                                >
-                                  WhatsApp Bulk
-                                </span>
-                                <span
-                                  style={{
-                                    padding: '2px 8px',
-                                    borderRadius: 9999,
-                                    fontSize: 11,
-                                    fontWeight: 600,
-                                    background: '#dcfce7',
-                                    color: '#15803d',
-                                  }}
-                                >
-                                  {wc.status || 'sent'}
-                                </span>
+                          {/* Card Top Row */}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flex: 1, minWidth: 200 }}>
+                              <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(37,99,235,0.08)', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <MessageSquare style={{ width: 18, height: 18 }} />
                               </div>
-                              <p style={{ fontSize: 13, color: '#475569', margin: 0, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                <span>Template: <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: 4 }}>{wc.templateId}</code></span>
-                                {wc.csvFileKey && (
-                                  <>
-                                    <span>•</span>
-                                    <span>CSV Key:</span>
-                                    <code
-                                      title={wc.csvFileKey}
-                                      style={{
-                                        background: '#f1f5f9',
-                                        padding: '1px 5px',
-                                        borderRadius: 4,
-                                        maxWidth: 160,
-                                        display: 'inline-block',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        verticalAlign: 'bottom',
-                                      }}
-                                    >
-                                      {wc.csvFileKey}
-                                    </code>
-                                  </>
-                                )}
-                              </p>
-                              <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
-                                Triggered: {createdDate}
-                              </p>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                                  <span style={{ fontSize: 15.5, fontWeight: 700, color: '#0F172A' }}>{wc.name}</span>
+                                  <span style={{ padding: '2px 10px', borderRadius: 9999, fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', background: '#E0E7FF', color: '#3730A3' }}>WhatsApp Bulk</span>
+                                  <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10.5, fontWeight: 600, background: '#DCFCE7', color: '#15803D' }}>{wc.status || 'sent'}</span>
+                                </div>
+                                <div style={{ fontSize: 12.5, color: '#64748B', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                  <span>📋 Template: <strong style={{ color: '#334155' }}>{wc.templateId || 'Standard'}</strong></span>
+                                  <span>📅 {createdDate}</span>
+                                  {totalCount > 0 && <span><Users style={{ width: 11, height: 11, display: 'inline' }} /> <strong style={{ color: '#334155' }}>{totalCount}</strong> recipients</span>}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/campaigns/${wc._id}`)}
+                                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, background: '#EFF6FF', color: '#2563EB', border: '1.5px solid #BFDBFE', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                              >
+                                <ExternalLink style={{ width: 13, height: 13 }} /> View Details
+                              </button>
+                              <button title="Delete WhatsApp campaign" onClick={() => handleDeleteWhatsAppCampaign(wc._id)} style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.15s' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.background = '#FEF2F2'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.background = '#FFFFFF'; }}
+                              ><Trash2 style={{ width: 14, height: 14 }} /></button>
                             </div>
                           </div>
 
-                          {/* Analytics Stat Chips */}
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            <div style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 8, padding: '6px 14px', textAlign: 'center', minWidth: 70 }}>
-                              <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{wc.stats?.sent || 0}</span>
-                              <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Sent</span>
-                            </div>
-                            <div style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 8, padding: '6px 14px', textAlign: 'center', minWidth: 70 }}>
-                              <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#16a34a' }}>{wc.stats?.delivered || 0}</span>
-                              <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Delivered</span>
-                            </div>
-                            <div style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 8, padding: '6px 14px', textAlign: 'center', minWidth: 70 }}>
-                              <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#2563eb' }}>{wc.stats?.read || 0}</span>
-                              <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Read</span>
-                            </div>
-                            <div style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 8, padding: '6px 14px', textAlign: 'center', minWidth: 70 }}>
-                              <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#ef4444' }}>{wc.stats?.failed || 0}</span>
-                              <span style={{ fontSize: 10, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Failed</span>
-                            </div>
+                          {/* WhatsApp Stats Row */}
+                          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+                            {[
+                              { label: 'Sent', value: sentCount, color: '#2563EB', bg: '#DBEAFE', icon: <Send style={{ width: 11, height: 11 }} /> },
+                              { label: 'Delivered', value: deliveredCount, color: '#16A34A', bg: '#DCFCE7', icon: <CheckCircle2 style={{ width: 11, height: 11 }} /> },
+                              { label: 'Read', value: readCount, color: '#7C3AED', bg: '#EDE9FE', icon: <Eye style={{ width: 11, height: 11 }} /> },
+                              { label: 'Failed', value: failedCount, color: '#EF4444', bg: '#FEF2F2', icon: <AlertTriangle style={{ width: 11, height: 11 }} /> },
+                              { label: 'Delivery %', value: `${deliveryPct}%`, color: '#059669', bg: '#D1FAE5', icon: <CheckCircle2 style={{ width: 11, height: 11 }} /> },
+                            ].map(({ label, value, color, bg, icon }) => (
+                              <div key={label} style={{ background: bg, borderRadius: 8, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ color }}>{icon}</span>
+                                <span style={{ fontSize: 12.5, fontWeight: 700, color }}>{value}</span>
+                                <span style={{ fontSize: 10.5, color, opacity: 0.75, fontWeight: 600 }}>{label}</span>
+                              </div>
+                            ))}
                           </div>
-
-                          <button
-                            title="Delete WhatsApp campaign"
-                            onClick={() => handleDeleteWhatsAppCampaign(wc._id)}
-                            style={{
-                              width: 34,
-                              height: 34,
-                              borderRadius: 8,
-                              border: '1px solid #e2e8f0',
-                              background: '#ffffff',
-                              color: '#94a3b8',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.color = '#ef4444';
-                              e.currentTarget.style.backgroundColor = '#fef2f2';
-                              e.currentTarget.style.borderColor = '#fee2e2';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.color = '#94a3b8';
-                              e.currentTarget.style.backgroundColor = '#ffffff';
-                              e.currentTarget.style.borderColor = '#e2e8f0';
-                            }}
-                          >
-                            <Trash2 style={{ width: 15, height: 15 }} />
-                          </button>
                         </div>
                       );
                     }
@@ -660,50 +522,15 @@ export const CampaignsPage: React.FC = () => {
                 <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 500 }}>
                   Showing <strong>{(page - 1) * limit + 1}–{Math.min(page * limit, total)}</strong> of <strong>{total}</strong> campaigns
                 </div>
-
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <button
-                    className="btn btn-secondary"
-                    disabled={page <= 1}
-                    onClick={() => setPage(page - 1)}
-                    style={{ width: 36, height: 36, padding: 0, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    title="Previous Page"
-                  >
-                    <ChevronLeft style={{ width: 16, height: 16 }} />
-                  </button>
-
+                  <button className="btn btn-secondary" disabled={page <= 1} onClick={() => setPage(page - 1)} style={{ width: 36, height: 36, padding: 0, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Previous Page"><ChevronLeft style={{ width: 16, height: 16 }} /></button>
                   {Array.from({ length: totalPages }, (_, i) => {
                     const pNum = i + 1;
                     return (
-                      <button
-                        key={pNum}
-                        onClick={() => setPage(pNum)}
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 8,
-                          border: pNum === page ? 'none' : '1px solid #E5E7EB',
-                          background: pNum === page ? '#2563EB' : '#FFFFFF',
-                          color: pNum === page ? '#FFFFFF' : '#475569',
-                          fontWeight: pNum === page ? 700 : 500,
-                          cursor: 'pointer',
-                          fontSize: 13,
-                        }}
-                      >
-                        {pNum}
-                      </button>
+                      <button key={pNum} onClick={() => setPage(pNum)} style={{ width: 36, height: 36, borderRadius: 8, border: pNum === page ? 'none' : '1px solid #E5E7EB', background: pNum === page ? '#2563EB' : '#FFFFFF', color: pNum === page ? '#FFFFFF' : '#475569', fontWeight: pNum === page ? 700 : 500, cursor: 'pointer', fontSize: 13 }}>{pNum}</button>
                     );
                   })}
-
-                  <button
-                    className="btn btn-secondary"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage(page + 1)}
-                    style={{ width: 36, height: 36, padding: 0, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    title="Next Page"
-                  >
-                    <ChevronRight style={{ width: 16, height: 16 }} />
-                  </button>
+                  <button className="btn btn-secondary" disabled={page >= totalPages} onClick={() => setPage(page + 1)} style={{ width: 36, height: 36, padding: 0, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Next Page"><ChevronRight style={{ width: 16, height: 16 }} /></button>
                 </div>
               </div>
             )}

@@ -25,7 +25,7 @@ export const SectionProperties: React.FC<SectionPropertiesProps> = ({
   } = section;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 20px', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: 12 }}>
         <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
           Section Settings
@@ -36,26 +36,26 @@ export const SectionProperties: React.FC<SectionPropertiesProps> = ({
       </div>
 
       {/* Section Background Color */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', boxSizing: 'border-box' }}>
         <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Section Background</label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', boxSizing: 'border-box' }}>
           <input
             type="color"
             value={background}
             onChange={(e) => onUpdateSection({ background: e.target.value })}
-            style={{ width: 38, height: 36, padding: 2, borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
+            style={{ width: 38, height: 36, padding: 2, borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer', flexShrink: 0, boxSizing: 'border-box' }}
           />
           <input
             type="text"
             value={background}
             onChange={(e) => onUpdateSection({ background: e.target.value })}
-            style={{ flex: 1, height: 36, padding: '0 10px', fontSize: 13, fontFamily: 'monospace', borderRadius: 6, border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+            style={{ flex: 1, minWidth: 0, width: '100%', height: 36, padding: '0 10px', fontSize: 13, fontFamily: 'monospace', borderRadius: 6, border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
           />
         </div>
       </div>
 
       {/* Section Padding */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', boxSizing: 'border-box' }}>
         <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Section Padding</label>
         <input
           type="text"
@@ -67,12 +67,12 @@ export const SectionProperties: React.FC<SectionPropertiesProps> = ({
       </div>
 
       {/* Visibility */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', boxSizing: 'border-box' }}>
         <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Display Visibility</label>
         <select
           value={visibility}
           onChange={(e) => onUpdateSection({ visibility: e.target.value as any })}
-          style={{ width: '100%', height: 36, padding: '0 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }}
+          style={{ width: '100%', height: 36, padding: '0 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
         >
           <option value="all">All Devices (Desktop & Mobile)</option>
           <option value="desktop">Desktop Only</option>

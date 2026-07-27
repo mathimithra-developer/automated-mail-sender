@@ -56,10 +56,10 @@ export const EmojiPickerField: React.FC<{
   const displayEmoji = value || placeholder;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, position: 'relative', fontFamily: "'Inter', sans-serif" }} ref={containerRef}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, position: 'relative', fontFamily: "'Inter', sans-serif", width: '100%', boxSizing: 'border-box' }} ref={containerRef}>
       {label && <label style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{label}</label>}
       {/* Trigger row */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
         {/* Left emoji preview button */}
         <button
           type="button"
@@ -69,7 +69,7 @@ export const EmojiPickerField: React.FC<{
             width: 52, height: 44, border: open || value ? '2.5px solid #2563eb' : '1px solid #cbd5e1',
             borderRadius: 12, background: open || value ? '#eff6ff' : '#ffffff', cursor: 'pointer',
             fontSize: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, transition: 'all 0.15s',
+            flexShrink: 0, transition: 'all 0.15s', boxSizing: 'border-box',
             boxShadow: open ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none',
           }}
         >
@@ -83,9 +83,9 @@ export const EmojiPickerField: React.FC<{
           placeholder={placeholder}
           maxLength={4}
           style={{
-            flex: 1, height: 44, padding: '0 12px', fontSize: 24, border: '1.5px solid #e2e8f0',
+            flex: 1, minWidth: 0, width: '100%', height: 44, padding: '0 12px', fontSize: 24, border: '1.5px solid #e2e8f0',
             borderRadius: 12, outline: 'none', background: '#ffffff', color: '#0f172a', textAlign: 'center',
-            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
+            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)', boxSizing: 'border-box'
           }}
         />
         {/* Right smiley face trigger */}
@@ -97,7 +97,7 @@ export const EmojiPickerField: React.FC<{
             width: 44, height: 44, border: open ? '1.5px solid #2563eb' : '1.5px solid #e2e8f0',
             borderRadius: 12, background: open ? '#eff6ff' : '#ffffff', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all 0.15s',
+            flexShrink: 0, transition: 'all 0.15s', boxSizing: 'border-box',
             boxShadow: open ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none',
           }}
         >
@@ -222,15 +222,15 @@ export const InlineEmojiInput: React.FC<{
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, position: 'relative', width: '100%' }} ref={containerRef}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, position: 'relative', width: '100%', boxSizing: 'border-box' }} ref={containerRef}>
       {label && <label style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>{label}</label>}
-      <div style={{ display: 'flex', alignItems: isTextarea ? 'flex-start' : 'center', gap: 6, position: 'relative', width: '100%' }}>
+      <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
         {isTextarea ? (
           <textarea
             value={value || ''}
             onChange={e => onChange(e.target.value)}
             rows={rows}
-            style={{ ...textareaStyle, paddingRight: 34 }}
+            style={{ ...textareaStyle, paddingRight: 34, width: '100%', boxSizing: 'border-box' }}
             placeholder={placeholder}
           />
         ) : (
@@ -238,7 +238,7 @@ export const InlineEmojiInput: React.FC<{
             type="text"
             value={value || ''}
             onChange={e => onChange(e.target.value)}
-            style={{ ...inputStyle, paddingRight: 34 }}
+            style={{ ...inputStyle, paddingRight: 34, width: '100%', boxSizing: 'border-box' }}
             placeholder={placeholder}
           />
         )}
@@ -333,43 +333,43 @@ interface BlockPropertyInspectorProps {
 
 // ─── Shared UI Components ─────────────────────────────────────────────────────
 
-const SectionDivider: React.FC<{ label: string }> = ({ label }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0 4px 0' }}>
+const SectionDivider: React.FC<{ label: string; style?: React.CSSProperties }> = ({ label, style }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0 4px 0', ...style }}>
     <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{label}</span>
     <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
   </div>
 );
 
-const Field: React.FC<{ label: React.ReactNode; children: React.ReactNode }> = ({ label, children }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+const Field: React.FC<{ label: React.ReactNode; children: React.ReactNode; style?: React.CSSProperties }> = ({ label, children, style }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%', boxSizing: 'border-box', ...style }}>
     <label style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>{label}</label>
     {children}
   </div>
 );
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '7px 10px', fontSize: 13, border: '1px solid #cbd5e1',
+  width: '100%', maxWidth: '100%', padding: '7px 10px', fontSize: 13, border: '1px solid #cbd5e1',
   borderRadius: 6, outline: 'none', boxSizing: 'border-box', background: '#ffffff', color: '#0f172a',
 };
 
 const textareaStyle: React.CSSProperties = {
-  ...inputStyle, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5,
+  ...inputStyle, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, boxSizing: 'border-box',
 };
 
 const ColorField: React.FC<{ label: string; value: string; onChange: (v: string) => void }> = ({ label, value, onChange }) => (
   <Field label={label}>
-    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
       <input type="color" value={value || '#000000'} onChange={e => onChange(e.target.value)}
-        style={{ width: 36, height: 34, padding: 2, border: '1px solid #cbd5e1', cursor: 'pointer', borderRadius: 6, flexShrink: 0 }} />
+        style={{ width: 36, height: 34, padding: 2, border: '1px solid #cbd5e1', cursor: 'pointer', borderRadius: 6, flexShrink: 0, boxSizing: 'border-box' }} />
       <input type="text" value={value || ''} onChange={e => onChange(e.target.value)}
-        style={{ ...inputStyle, fontFamily: 'monospace', flex: 1 }} />
+        style={{ ...inputStyle, fontFamily: 'monospace', flex: 1, minWidth: 0, width: '100%', boxSizing: 'border-box' }} />
     </div>
   </Field>
 );
 
-const AlignField: React.FC<{ value: string; onChange: (v: string) => void }> = ({ value, onChange }) => (
-  <Field label="Alignment">
-    <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 2, borderRadius: 6 }}>
+const AlignField: React.FC<{ value: string; onChange: (v: string) => void; style?: React.CSSProperties }> = ({ value, onChange, style }) => (
+  <Field label="Alignment" style={style}>
+    <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 2, borderRadius: 6, width: '100%', boxSizing: 'border-box' }}>
       {(['left', 'center', 'right'] as const).map(a => (
         <button key={a} type="button" onClick={() => onChange(a)} style={{
           flex: 1, border: 'none', borderRadius: 4, cursor: 'pointer', padding: '5px',
@@ -445,6 +445,7 @@ const ButtonSection: React.FC<{
   colorField?: string;
   content: any;
   onUpdate: (k: string, v: any) => void;
+  style?: React.CSSProperties;
 }> = ({ sectionLabel = 'Button / CTA', labelField, urlField, colorField, content, onUpdate }) => (
   <>
     <SectionDivider label={sectionLabel} />
@@ -1444,7 +1445,7 @@ function renderBlockFields(block: BuilderBlock, content: any, upd: (k: string, v
     </>);
   }
 
-  if (type === 'countdown' || type === 'timer') {
+  if (type === 'countdown' || (type as string) === 'timer') {
     return (<>
       <SectionDivider label="Countdown Timer Settings" />
       <Field label="Title / Header"><input type="text" value={content.title || ''} onChange={e => upd('title', e.target.value)} style={inputStyle} placeholder="Sale Ends In:" /></Field>
@@ -1519,7 +1520,7 @@ function renderBlockFields(block: BuilderBlock, content: any, upd: (k: string, v
     </>);
   }
 
-  if (type === 'menu' || type === 'nav') {
+  if (type === 'menu' || (type as string) === 'nav') {
     const items = content.items || content.links || [];
     return (<>
       <SectionDivider label="Navigation Menu Items" />
@@ -1680,7 +1681,7 @@ function renderBlockFields(block: BuilderBlock, content: any, upd: (k: string, v
             <button
               type="button"
               onClick={() => {
-                const nextIcons = iconsList.filter((_, idx) => idx !== i);
+                const nextIcons = iconsList.filter((_: any, idx: number) => idx !== i);
                 upd('icons', nextIcons);
               }}
               style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}
@@ -1718,22 +1719,22 @@ function renderBlockFields(block: BuilderBlock, content: any, upd: (k: string, v
 
     const addColumn = () => {
       const nextHeaders = [...headers, `Header ${headers.length + 1}`];
-      const nextRows = rows.map(r => [...r, '']);
+      const nextRows = rows.map((r: any) => [...r, '']);
       upd('headers', nextHeaders);
       upd('rows', nextRows);
     };
 
     const removeColumn = (index: number) => {
       if (headers.length <= 1) return;
-      const nextHeaders = headers.filter((_, i) => i !== index);
-      const nextRows = rows.map(r => r.filter((_, i) => i !== index));
+      const nextHeaders = headers.filter((_: any, i: number) => i !== index);
+      const nextRows = rows.map((r: any) => r.filter((_: any, i: number) => i !== index));
       upd('headers', nextHeaders);
       upd('rows', nextRows);
     };
 
     const updateCell = (rowIndex: number, colIndex: number, val: string) => {
-      const nextRows = rows.map((r, ri) => 
-        ri === rowIndex ? r.map((c, ci) => ci === colIndex ? val : c) : r
+      const nextRows = rows.map((r: any, ri: number) => 
+        ri === rowIndex ? r.map((c: any, ci: number) => ci === colIndex ? val : c) : r
       );
       upd('rows', nextRows);
     };
@@ -1745,7 +1746,7 @@ function renderBlockFields(block: BuilderBlock, content: any, upd: (k: string, v
 
     const removeRow = (index: number) => {
       if (rows.length <= 1) return;
-      const nextRows = rows.filter((_, i) => i !== index);
+      const nextRows = rows.filter((_: any, i: number) => i !== index);
       upd('rows', nextRows);
     };
 
@@ -1901,7 +1902,7 @@ export const BlockPropertyInspector: React.FC<BlockPropertyInspectorProps> = ({
     .trim();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '14px 18px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '14px 18px', width: '100%', boxSizing: 'border-box' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: 10 }}>
         <div>
@@ -1929,7 +1930,7 @@ export const BlockPropertyInspector: React.FC<BlockPropertyInspectorProps> = ({
       )}
 
       {/* All properties — unified scrollable panel */}
-      <fieldset disabled={isLocked} style={{ border: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <fieldset disabled={isLocked} style={{ border: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
         {renderBlockFields(block, content, handleUpdate)}
       </fieldset>
     </div>
