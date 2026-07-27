@@ -27,10 +27,24 @@ function attr(k, value) {
 const daysAgo = (n) => new Date(Date.now() - n * 86_400_000);
 
 // ─────────────────────────────────────────────────────────────────────────────
-export async function seedData(shouldConnectAndDisconnect = true) {
+export async function seedData(shouldConnectAndDisconnect = true, force = false) {
   if (shouldConnectAndDisconnect) {
     await mongoose.connect(MONGO_URI);
     console.log('✅ Connected to MongoDB');
+  }
+
+  // Only seed if database is empty or force is true
+  try {
+    const userCount = await User.countDocuments();
+    if (userCount > 0 && !force) {
+      console.log('ℹ️ Database already has data. Skipping seed to prevent data loss.');
+      if (shouldConnectAndDisconnect) {
+        await mongoose.disconnect();
+      }
+      return;
+    }
+  } catch (err) {
+    console.warn('⚠️ Error checking database user count:', err.message);
   }
 
   // ── Wipe existing demo data ───────────────────────────────────────────────
@@ -404,7 +418,7 @@ export async function seedData(shouldConnectAndDisconnect = true) {
 }
 
 if (process.argv[1]?.endsWith('seed.js')) {
-  seedData(true).catch(err => {
+  seedData(true, true).catch(err => {
     console.error('❌ Seed failed:', err);
     mongoose.disconnect();
     process.exit(1);

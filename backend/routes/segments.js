@@ -352,13 +352,22 @@ router.get('/:id/export', async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const headers = ['Name', 'Email', 'Phone', 'Email Status', 'Allow Broadcast', 'Created At'];
+    const formatWhatsAppPhone = (phone) => {
+      if (!phone) return '';
+      let cleaned = String(phone).replace(/\D/g, '').replace(/^0+/, '');
+      if (cleaned.length === 10) {
+        cleaned = '91' + cleaned;
+      }
+      return cleaned;
+    };
+
+    const headers = ['Name', 'Phone', 'Email', 'allowBroadcast', 'Email Status', 'Created At'];
     const rows = customers.map(c => [
       `"${(c.name || '').replace(/"/g, '""')}"`,
+      `"${formatWhatsAppPhone(c.phoneNo)}"`,
       `"${(c.email || '').replace(/"/g, '""')}"`,
-      `"${(c.phoneNo || '').replace(/"/g, '""')}"`,
+      `"true"`,
       `"${(c.emailStatus || 'active').replace(/"/g, '""')}"`,
-      `"${c.allowBroadcast ? 'Yes' : 'No'}"`,
       `"${c.createdAt ? new Date(c.createdAt).toISOString() : ''}"`
     ]);
 
@@ -372,6 +381,7 @@ router.get('/:id/export', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 function buildQuery(orgId, conditions = [], conditionGroups = [], groupsMatch = 'all') {
   const filter = { belongsTo: orgId };

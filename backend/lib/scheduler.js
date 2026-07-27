@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Campaign, Customer, SendLog, Segment } from './models.js';
 import { sendCampaignBatch } from './mailer.js';
 
@@ -6,6 +7,9 @@ export function startCampaignScheduler() {
 
   // Check every 20 seconds for scheduled campaigns
   setInterval(async () => {
+    // Skip silently if DB is not connected — auto-reconnect handles recovery
+    if (mongoose.connection.readyState !== 1) return;
+
     try {
       const now = new Date();
       const dueCampaigns = await Campaign.find({
@@ -95,10 +99,11 @@ export function startCampaignScheduler() {
         console.log(`✅ Scheduled campaign ${campaign.name} completed successfully. Sent: ${sent}, Failed: ${failed}`);
       }
     } catch (err) {
-      console.error('Error in campaign scheduler:', err);
+      console.error('Error in campaign scheduler:', err.message);
     }
   }, 20000);
 }
+
 
 function buildQueryForScheduler(orgId, conditions = [], conditionGroups = []) {
   const filter = { belongsTo: orgId };

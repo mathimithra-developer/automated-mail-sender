@@ -10,8 +10,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
 // Ensure .env is loaded from workspace root even if process started from backend/
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, "../.env"), override: true });
+dotenv.config({ override: true });
 
 import { connectDB } from "./lib/db.js";
 import { User, Organization, OrgEmailSettings, Customer, Unsubscribe, EmailTemplate, CustomField } from "./lib/models.js";
