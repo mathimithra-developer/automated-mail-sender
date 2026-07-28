@@ -399,10 +399,11 @@ function buildQuery(orgId, conditions = [], conditionGroups = [], groupsMatch = 
         if (isAttribute) {
           const valType = c.valueType || (attrKey === 'lead_score' || typeof c.value === 'number' ? 'num' : 'str');
           const valField = `v_${valType}`;
+          const escKey = (attrKey || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           condFilter = {
             attributes: {
               $elemMatch: {
-                k: attrKey,
+                k: { $regex: new RegExp(`^${escKey}$`, 'i') },
                 [valField]: applyOp(c.operator, c.value),
               },
             },
@@ -445,10 +446,11 @@ function buildQuery(orgId, conditions = [], conditionGroups = [], groupsMatch = 
     filter.$and = attrConds.map(c => {
       const key = c.field === 'attribute' ? c.attrKey : c.field;
       const valType = c.valueType || (key === 'lead_score' || typeof c.value === 'number' ? 'num' : 'str');
+      const escKey = (key || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       return {
         attributes: {
           $elemMatch: {
-            k: key,
+            k: { $regex: new RegExp(`^${escKey}$`, 'i') },
             [`v_${valType}`]: applyOp(c.operator, c.value),
           },
         },
@@ -463,11 +465,11 @@ function applyOp(op, val) {
   switch (op) {
     case 'eq':
     case 'is':
-      return val;
+      return typeof val === 'string' ? { $regex: `^${esc(val)}$`, $options: 'i' } : val;
     case 'neq':
     case 'is not':
     case 'is_not':
-      return { $ne: val };
+      return typeof val === 'string' ? { $not: new RegExp(`^${esc(val)}$`, 'i') } : { $ne: val };
     case 'gt':
     case 'greater than':
     case 'after':
@@ -515,7 +517,7 @@ function applyOp(op, val) {
     case 'is_not_empty':
       return { $nin: [null, ''] };
     default:
-      return val;
+      return typeof val === 'string' ? { $regex: `^${esc(val)}$`, $options: 'i' } : val;
   }
 }
 

@@ -101,9 +101,17 @@ async function callZepto(token, payload) {
 // Get org email settings (cached per request is fine — small app)
 // ─────────────────────────────────────────────────────────────────────────────
 async function getOrgSettings(orgId) {
-  const settings = await OrgEmailSettings.findOne({ organization: orgId });
-  if (!settings) throw new Error('Email settings not configured for this organisation');
-  return settings;
+  const settings = await OrgEmailSettings.findOne({ organization: orgId }).lean();
+  if (settings) return settings;
+
+  // Fallback to system environment settings if no org settings document exists
+  const hasSes = !!(process.env.AWS_SES_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID);
+  return {
+    provider: process.env.EMAIL_PROVIDER || (hasSes ? 'ses' : 'zepto'),
+    senderEmail: process.env.AWS_SES_SENDER_EMAIL || process.env.ZEPTO_SENDER_EMAIL || 'noreply@example.com',
+    senderName: process.env.AWS_SES_SENDER_NAME || process.env.ZEPTO_SENDER_NAME || 'Mail Sender',
+    apiKey: process.env.ZEPTO_API_KEY || '',
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,19 +131,39 @@ export async function sendEmail({ orgId, to, toName, subject, htmlBody, textBody
 
     if (!fromEmail) throw new Error('SES sender email not configured.');
 
-    const transporter = getSesTransporter();
-    const info = await sendNodemailer(transporter, {
-      fromEmail,
-      fromName,
-      to,
-      toName,
-      subject,
-      htmlBody: finalHtml,
-      textBody: finalValText,
-      replyToAddr,
-      headers,
-    });
-    return { messageId: info.messageId, data: info };
+    try {
+      const transporter = getSesTransporter();
+      const info = await sendNodemailer(transporter, {
+        fromEmail,
+        fromName,
+        to,
+        toName,
+        subject,
+        htmlBody: finalHtml,
+        textBody: finalValText,
+        replyToAddr,
+        headers,
+      });
+      return { messageId: info.messageId, data: info };
+    } catch (sesErr) {
+      const zeptoKey = settings.apiKey || process.env.ZEPTO_API_KEY;
+      if (zeptoKey) {
+        console.warn('⚠️ SES failed. Falling back to ZeptoMail:', sesErr.message);
+        const zeptoToken = zeptoKey.startsWith('Zoho-enczapikey ') ? zeptoKey.substring(16) : zeptoKey;
+        const zeptoSender = process.env.ZEPTO_SENDER_EMAIL || settings.senderEmail || 'noreply@ownchat.app';
+        const payload = {
+          from:          { address: zeptoSender, name: fromName },
+          to:            [{ email_address: { address: to, name: toName || to } }],
+          reply_to:      { address: replyToAddr },
+          subject,
+          htmlbody:      finalHtml,
+          textbody:      finalValText,
+          mime_headers:  headers,
+        };
+        return callZepto(zeptoToken, payload);
+      }
+      throw sesErr;
+    }
 
   } else if (provider === 'smtp') {
     const fromEmail = settings.senderEmail || settings.smtpUser;
@@ -240,18 +268,45 @@ export async function sendCampaignBatch({ orgId, campaign, recipients, htmlTempl
 
     try {
       if (provider === 'ses' || provider === 'smtp') {
-        const info = await sendNodemailer(transporter, {
-          fromEmail,
-          fromName,
-          to: toEmail,
-          toName: customer.name || toEmail,
-          subject: replaceMergeTags(subject, customer),
-          htmlBody: finalHtml,
-          textBody: stripHtml(finalHtml),
-          replyToAddr: settings.replyTo || fromEmail,
-          headers,
-        });
-        results.push({ customerId: customer._id, email: toEmail, messageId: info.messageId, error: null });
+        try {
+          const info = await sendNodemailer(transporter, {
+            fromEmail,
+            fromName,
+            to: toEmail,
+            toName: customer.name || toEmail,
+            subject: replaceMergeTags(subject, customer),
+            htmlBody: finalHtml,
+            textBody: stripHtml(finalHtml),
+            replyToAddr: settings.replyTo || fromEmail,
+            headers,
+          });
+          results.push({ customerId: customer._id, email: toEmail, messageId: info.messageId, error: null });
+        } catch (primaryErr) {
+          const zeptoKey = settings.apiKey || process.env.ZEPTO_API_KEY;
+          if (zeptoKey) {
+            try {
+              const zeptoToken = zeptoKey.startsWith('Zoho-enczapikey ') ? zeptoKey.substring(16) : zeptoKey;
+              const zeptoSender = process.env.ZEPTO_SENDER_EMAIL || settings.senderEmail || 'noreply@ownchat.app';
+              const payload = {
+                from:         { address: zeptoSender, name: fromName },
+                to:           [{ email_address: { address: toEmail, name: customer.name || toEmail } }],
+                reply_to:     { address: settings.replyTo || zeptoSender },
+                subject:      replaceMergeTags(subject, customer),
+                htmlbody:     finalHtml,
+                textbody:     stripHtml(finalHtml),
+                mime_headers: headers,
+              };
+
+              const res = await callZepto(zeptoToken, payload);
+              const msgId = res?.data?.[0]?.message_id || res?.request_id || null;
+              results.push({ customerId: customer._id, email: toEmail, messageId: msgId, error: null });
+            } catch (zeptoErr) {
+              results.push({ customerId: customer._id, email: toEmail, messageId: null, error: primaryErr.message });
+            }
+          } else {
+            results.push({ customerId: customer._id, email: toEmail, messageId: null, error: primaryErr.message });
+          }
+        }
       } else {
         const payload = {
           from:         { address: fromEmail, name: fromName },
@@ -284,16 +339,24 @@ export async function sendCampaignBatch({ orgId, campaign, recipients, htmlTempl
 export function replaceMergeTags(template, customer) {
   if (!template) return '';
 
+  const nameVal = customer.name || '';
+  const firstNameVal = nameVal.split(' ')[0] || '';
+  const emailVal = customer.email || '';
+  const phoneVal = customer.phoneNo || '';
+
   let out = template
-    .replaceAll('{{customer.name}}',      customer.name   || '')
-    .replaceAll('{{customer.firstName}}', (customer.name || '').split(' ')[0] || '')
-    .replaceAll('{{customer.email}}',     customer.email  || '')
-    .replaceAll('{{customer.phone}}',     customer.phoneNo|| '');
+    .replace(/\{\{\s*(?:customer\.)?(?:name|fullname|full_name)\s*\}\}/gi, nameVal)
+    .replace(/\{\{\s*(?:customer\.)?(?:firstname|first_name)\s*\}\}/gi, firstNameVal)
+    .replace(/\{\{\s*(?:customer\.)?(?:email|emailaddress|email_address)\s*\}\}/gi, emailVal)
+    .replace(/\{\{\s*(?:customer\.)?(?:phone|phoneno|phone_number|mobile)\s*\}\}/gi, phoneVal);
 
   if (customer.attributes?.length) {
     for (const attr of customer.attributes) {
-      const val = attr.v_str ?? attr.v_num ?? (attr.v_date ? attr.v_date.toISOString().slice(0,10) : '');
-      out = out.replaceAll(`{{attr.${attr.k}}}`, val ?? '');
+      if (!attr.k) continue;
+      const val = String(attr.v_str ?? attr.v_num ?? (attr.v_date ? attr.v_date.toISOString().slice(0,10) : '') ?? '');
+      const escKey = attr.k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const attrRegex = new RegExp(`\\{\\{\\s*(?:attr\\.)?${escKey}\\s*\\}\\}`, 'gi');
+      out = out.replace(attrRegex, val);
     }
   }
 

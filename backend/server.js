@@ -422,7 +422,7 @@ connectDB().then(() => {
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
       console.error(`\n❌ PORT ${PORT} IS ALREADY IN USE!`);
-      console.error(`👉 Another process is running on port ${PORT}. Run 'Stop-Process -Name node -Force' to kill it.\n`);
+      console.error(`👉 Another process is running on port ${PORT}. Run: lsof -ti :${PORT} | xargs kill -9\n`);
       process.exit(1);
     } else {
       console.error('Server error:', err);

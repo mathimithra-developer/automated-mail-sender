@@ -8,11 +8,28 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 
+import dotenv from 'dotenv';
+
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-const OWNCHAT_API_KEY = process.env.OWNCHAT_API_KEY || 'JWjSOZ4sDsxE-gRK3yRf-FHD0LFfSiv9nFpVsjlV';
-const OWNCHAT_API_SECRET = process.env.OWNCHAT_API_SECRET || 'C_Pg-fMf5kDA_nvkMXrZMSKO5VD6qiAPhSprcFlw';
+const reloadEnv = () => {
+  try {
+    dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
+    dotenv.config({ path: path.resolve(process.cwd(), '../.env'), override: true });
+    dotenv.config({ path: '/Users/ieyal/Documents/GitHub/automated-mail-sender/.env', override: true });
+  } catch (e) {}
+};
+
+const getApiKey = () => {
+  reloadEnv();
+  return process.env.OWNCHAT_API_KEY || 'JWjSOZ4sDsxE-gRK3yRf-FHD0LFfSiv9nFpVsjlV';
+};
+
+const getApiSecret = () => {
+  reloadEnv();
+  return process.env.OWNCHAT_API_SECRET || 'C_Pg-fMf5kDA_nvkMXrZMSKO5VD6qiAPhSprcFlw';
+};
 
 const METADATA_PATH = path.resolve('uploads/whatsapp_campaign_metadata.json');
 
@@ -40,8 +57,9 @@ const saveCampaignMetadata = (data) => {
 };
 
 const getBaseUrl = () => {
-  let url = process.env.OWNCHAT_BASE_URL || 'https://api-test.ownchat.app';
-  if (url.startsWith('http://api-test.ownchat.app')) {
+  reloadEnv();
+  let url = process.env.OWNCHAT_BASE_URL || 'https://api.ownchat.app';
+  if (url.startsWith('http://')) {
     url = url.replace('http://', 'https://');
   }
   return url;
@@ -80,6 +98,15 @@ export function findWhatsAppCampaign(id) {
   return null;
 }
 
+export const sanitizeWhatsAppPhone = (phoneStr, defaultCountryCode = '91') => {
+  if (!phoneStr) return '';
+  let digits = String(phoneStr).replace(/\D/g, '').replace(/^0+/, '');
+  if (digits.length === 10) {
+    digits = defaultCountryCode + digits;
+  }
+  return digits;
+};
+
 // ── 1. POST /api/whatsapp/upload-csv-headers ─────────────────────────────────
 router.post(['/upload-csv-headers', '/upload-csv-get-headers', '/campaign/upload-csv-get-headers', '/apis/v1/campaign/upload-csv-get-headers'], upload.single('file'), async (req, res) => {
   try {
@@ -87,21 +114,40 @@ router.post(['/upload-csv-headers', '/upload-csv-get-headers', '/campaign/upload
       return res.status(400).json({ error: 'No CSV file uploaded. Please upload a CSV file.' });
     }
 
-    const csvContent = req.file.buffer.toString('utf-8');
-    const lines = csvContent.split(/\r?\n/).filter((l) => l.trim().length > 0);
-    const rowCount = Math.max(1, lines.length - 1);
+    let csvContent = req.file.buffer.toString('utf-8');
+    let lines = csvContent.split(/\r?\n/).filter((l) => l.trim().length > 0);
 
-    console.log(`📤 Uploading CSV to OwnChat: ${rowCount} rows, file size: ${req.file.buffer.length} bytes`);
+    // Auto-sanitize phone numbers in CSV rows to E.164 digits format (e.g. 918807949733)
+    if (lines.length > 1) {
+      const headers = lines[0].split(',').map((h) => h.trim().replace(/^["']|["']$/g, ''));
+      const phoneColIdx = headers.findIndex((h) => /phone|mobile|contact|num/i.test(h));
+      if (phoneColIdx !== -1) {
+        const sanitizedLines = [lines[0]];
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(',');
+          if (cols[phoneColIdx]) {
+            cols[phoneColIdx] = `"${sanitizeWhatsAppPhone(cols[phoneColIdx])}"`;
+          }
+          sanitizedLines.push(cols.join(','));
+        }
+        csvContent = sanitizedLines.join('\n');
+      }
+    }
+
+    const rowCount = Math.max(1, lines.length - 1);
+    const cleanedBuffer = Buffer.from(csvContent, 'utf-8');
+
+    console.log(`📤 Uploading CSV to OwnChat: ${rowCount} rows, file size: ${cleanedBuffer.length} bytes`);
     console.log(`📋 CSV Preview (first 3 lines):\n${lines.slice(0, 3).join('\n')}`);
 
     // Enforce text/csv MIME type for OwnChat API compatibility
-    const fileBlob = new Blob([req.file.buffer], { type: 'text/csv' });
+    const fileBlob = new Blob([cleanedBuffer], { type: 'text/csv' });
     const formData = new FormData();
     formData.append('file', fileBlob, req.file.originalname || 'contacts.csv');
 
     const ownChatUrl = `${getBaseUrl()}/apis/v1/campaign/upload-csv-get-headers`;
-    const apiKey = req.headers['ownchat-api-key'] || OWNCHAT_API_KEY;
-    const apiSecret = req.headers['ownchat-api-secret'] || OWNCHAT_API_SECRET;
+    const apiKey = req.headers['ownchat-api-key'] || getApiKey();
+    const apiSecret = req.headers['ownchat-api-secret'] || getApiSecret();
 
     let ownChatRes = null;
     try {
@@ -189,8 +235,8 @@ router.all('/templates', async (req, res) => {
         ownChatRes = await fetchWithRetry(ownChatUrl, {
           method: 'POST',
           headers: {
-            'OWNCHAT-API-KEY': OWNCHAT_API_KEY,
-            'OWNCHAT-API-SECRET': OWNCHAT_API_SECRET,
+            'OWNCHAT-API-KEY': getApiKey(),
+            'OWNCHAT-API-SECRET': getApiSecret(),
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({}),
@@ -213,8 +259,8 @@ router.all('/templates', async (req, res) => {
       ownChatRes = await fetchWithRetry(page1Url, {
         method: 'POST',
         headers: {
-          'OWNCHAT-API-KEY': OWNCHAT_API_KEY,
-          'OWNCHAT-API-SECRET': OWNCHAT_API_SECRET,
+          'OWNCHAT-API-KEY': getApiKey(),
+          'OWNCHAT-API-SECRET': getApiSecret(),
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({}),
@@ -223,6 +269,11 @@ router.all('/templates', async (req, res) => {
       console.error('❌ Template fetch error details:', e);
       if (e.cause) console.error('❌ Template fetch error cause:', e.cause);
       console.warn('⚠️ OwnChat server unreachable. Serving default WhatsApp templates:', e.message);
+    }
+
+    if (ownChatRes && !ownChatRes.ok) {
+      const errBody = await ownChatRes.text().catch(() => '');
+      console.warn(`⚠️ OwnChat API returned status ${ownChatRes.status}: ${errBody}`);
     }
 
     if (ownChatRes && ownChatRes.ok) {
@@ -240,8 +291,8 @@ router.all('/templates', async (req, res) => {
             fetchWithRetry(`${getBaseUrl()}/apis/v1/templates/get-all?page=${p}&requestFrom=campaign`, {
               method: 'POST',
               headers: {
-                'OWNCHAT-API-KEY': OWNCHAT_API_KEY,
-                'OWNCHAT-API-SECRET': OWNCHAT_API_SECRET,
+                'OWNCHAT-API-KEY': getApiKey(),
+                'OWNCHAT-API-SECRET': getApiSecret(),
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({}),
@@ -258,8 +309,19 @@ router.all('/templates', async (req, res) => {
         });
       }
 
-      console.log(`⚡ Rapidly loaded ALL ${allTemplates.length} WhatsApp templates in parallel!`);
-      return res.json({ success: true, waMsgTemplates: allTemplates, totalCount: allTemplates.length });
+      // Deduplicate templates by name or _id while preserving exact order
+      const seen = new Set();
+      const uniqueTemplates = [];
+      for (const t of allTemplates) {
+        const key = (t.name || t._id || t.id || '').toLowerCase().trim();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          uniqueTemplates.push(t);
+        }
+      }
+
+      console.log(`⚡ Rapidly loaded ALL ${uniqueTemplates.length} unique WhatsApp templates!`);
+      return res.json({ success: true, waMsgTemplates: uniqueTemplates, totalCount: uniqueTemplates.length });
     }
 
     // Default fallback templates if offline
@@ -306,8 +368,8 @@ router.post('/templates/get-variables-template-data', async (req, res) => {
     }
 
     const ownChatUrl = `${getBaseUrl()}/apis/v1/templates/get-variables-template-data`;
-    const apiKey = req.headers['ownchat-api-key'] || OWNCHAT_API_KEY;
-    const apiSecret = req.headers['ownchat-api-secret'] || OWNCHAT_API_SECRET;
+    const apiKey = req.headers['ownchat-api-key'] || getApiKey();
+    const apiSecret = req.headers['ownchat-api-secret'] || getApiSecret();
 
     let ownChatRes = null;
     try {
@@ -447,13 +509,14 @@ router.post(['/trigger-campaign', '/trigger-bulk-s3', '/campaign/trigger-bulk-s3
       templateId: templateId,
       nameColumn: nameColumn,
       phoneColumn: phoneColumn,
+      publishMode: campaignMeta.publishMode || 'now',
     };
 
     console.log('🚀 Triggering WhatsApp campaign via OwnChat with payload:', JSON.stringify(payload, null, 2));
 
     const ownChatUrl = `${getBaseUrl()}/apis/v1/campaign/trigger-bulk-s3`;
-    const apiKey = req.headers['ownchat-api-key'] || OWNCHAT_API_KEY;
-    const apiSecret = req.headers['ownchat-api-secret'] || OWNCHAT_API_SECRET;
+    const apiKey = req.headers['ownchat-api-key'] || getApiKey();
+    const apiSecret = req.headers['ownchat-api-secret'] || getApiSecret();
 
     let ownChatRes = null;
     let responseData = null;
@@ -477,7 +540,17 @@ router.post(['/trigger-campaign', '/trigger-bulk-s3', '/campaign/trigger-bulk-s3
         responseData = { message: responseText };
       }
     } catch (netErr) {
-      console.warn('⚠️ OwnChat server unreachable. Simulating campaign trigger:', netErr.message);
+      console.warn('⚠️ OwnChat server unreachable:', netErr.message);
+      return res.status(503).json({ error: `Cannot reach OwnChat API: ${netErr.message}` });
+    }
+
+    // If OwnChat returned a non-2xx response, surface the error
+    if (ownChatRes && !ownChatRes.ok) {
+      console.error(`❌ OwnChat rejected campaign creation [${ownChatRes.status}]:`, JSON.stringify(responseData));
+      return res.status(ownChatRes.status).json({
+        error: responseData?.message || responseData?.error || `OwnChat rejected campaign (${ownChatRes.status})`,
+        details: responseData,
+      });
     }
 
     const actualCount = body.contactCount || 4;
@@ -497,7 +570,7 @@ router.post(['/trigger-campaign', '/trigger-bulk-s3', '/campaign/trigger-bulk-s3
       _id: campaignId,
       name: campaignMeta.name,
       templateId: campaignMeta.templateId,
-      status: 'completed',
+      status: responseData?.status || 'in_progress',
       type: 'whatsapp',
       csvFileKey,
       nameColumn: systemMapping.nameColumn,
@@ -530,8 +603,8 @@ router.post(['/trigger-campaign', '/trigger-bulk-s3', '/campaign/trigger-bulk-s3
 router.all('/campaigns', async (req, res) => {
   try {
     const ownChatUrl = `${getBaseUrl()}/apis/v1/campaign/bulk-csv/get-all?page=1&limit=30`;
-    const apiKey = req.headers['ownchat-api-key'] || OWNCHAT_API_KEY;
-    const apiSecret = req.headers['ownchat-api-secret'] || OWNCHAT_API_SECRET;
+    const apiKey = req.headers['ownchat-api-key'] || getApiKey();
+    const apiSecret = req.headers['ownchat-api-secret'] || getApiSecret();
 
     let ownChatRes = null;
     try {
@@ -568,9 +641,27 @@ router.all('/campaigns', async (req, res) => {
 
       const meta = getCampaignMetadata();
       const formattedRemote = rawList.map((c) => {
-        const createdNum = c.createdCount || 0;
-        const failedNum = c.failedCount || 0;
-        const totalNum = createdNum + failedNum || 4;
+        const createdNum = Number(c.createdCount) || 0;
+        const failedNum = Number(c.failedCount) || 0;
+        const totalNum = createdNum || Number(c.totalCount) || 3;
+        
+        // Accurate OwnChat status determination
+        const isFinished = c.isFinished === true;
+        const isAllFailed = isFinished && failedNum > 0 && failedNum >= totalNum;
+        const isScheduled = c.status === 'scheduled' || c.publishMode === 'schedule';
+        const isInProgress = !isFinished && !isScheduled;
+
+        let finalStatus = 'completed';
+        if (isInProgress) {
+          finalStatus = 'in_progress';
+        } else if (isScheduled) {
+          finalStatus = 'scheduled';
+        } else if (isAllFailed) {
+          finalStatus = 'failed';
+        }
+
+        const deliveredNum = isFinished ? Math.max(0, totalNum - failedNum) : 0;
+        const sentNum = isFinished ? Math.max(0, totalNum - failedNum) : 0;
         const campaignId = c._id || `wa_${Math.random()}`;
         const matchedMeta = meta[campaignId];
 
@@ -578,71 +669,44 @@ router.all('/campaigns', async (req, res) => {
           _id: campaignId,
           name: c.name || 'WhatsApp Bulk Campaign',
           templateId: c.templateId || 'WhatsApp Template',
-          status: c.isFinished ? 'completed' : c.status || 'completed',
+          status: finalStatus,
           type: 'whatsapp',
           csvFileKey: c.sourceUrl || c.csvFileKey,
           segment: matchedMeta?.segmentId || null,
           createdAt: c.createdAt || new Date().toISOString(),
           stats: {
             total: totalNum,
-            sent: createdNum || totalNum,
-            delivered: createdNum || totalNum,
+            sent: sentNum,
+            delivered: deliveredNum,
             read: 0,
             failed: failedNum,
           },
         };
       });
 
-      const combined = [...dispatchedWhatsAppCampaigns.map(lc => ({
-        ...lc,
-        segment: lc.segment || meta[lc._id]?.segmentId || null
-      })), ...formattedRemote];
+      const remoteIds = new Set(formattedRemote.map((r) => String(r._id)));
 
-      // Deduplicate and merge local and remote campaigns by ID first, then by name
-      const uniqueMap = new Map();
-      const mergeRecords = (local, remote) => {
+      // Merge local details for matched remote items (e.g. segment mapping)
+      const mergedRemote = formattedRemote.map((rc) => {
+        const localMatch = dispatchedWhatsAppCampaigns.find((lc) => String(lc._id) === String(rc._id) || lc.name === rc.name);
         return {
-          ...remote,
-          ...local,
-          // Prioritize remote for live stats & completion status
-          status: remote.status || local.status,
-          stats: {
-            total: remote.stats?.total || local.stats?.total || 0,
-            sent: remote.stats?.sent || local.stats?.sent || 0,
-            delivered: remote.stats?.delivered || local.stats?.delivered || 0,
-            read: remote.stats?.read || local.stats?.read || 0,
-            failed: remote.stats?.failed || local.stats?.failed || 0,
-          },
-          // Keep template details from local if remote doesn't have it
-          templateId: local.templateId && local.templateId !== 'WhatsApp Template'
-            ? local.templateId
-            : (remote.templateId !== 'WhatsApp Template' ? remote.templateId : 'WhatsApp Template'),
+          ...rc,
+          segment: rc.segment || localMatch?.segment || meta[rc._id]?.segmentId || null,
+          templateId: (localMatch?.templateId && localMatch.templateId !== 'WhatsApp Template')
+            ? localMatch.templateId
+            : (rc.templateId !== 'WhatsApp Template' ? rc.templateId : 'WhatsApp Template'),
         };
-      };
+      });
 
-      for (const c of combined) {
-        const id = c._id;
-        const name = c.name;
-        if (uniqueMap.has(id)) {
-          const existing = uniqueMap.get(id);
-          uniqueMap.set(id, mergeRecords(existing, c));
-        } else {
-          let foundByName = false;
-          for (const [k, v] of uniqueMap.entries()) {
-            if (v.name === name) {
-              uniqueMap.set(k, mergeRecords(v, c));
-              foundByName = true;
-              break;
-            }
-          }
-          if (!foundByName) {
-            uniqueMap.set(id, c);
-          }
-        }
-      }
+      const localOnly = dispatchedWhatsAppCampaigns
+        .filter((lc) => !remoteIds.has(String(lc._id)))
+        .map((lc) => ({
+          ...lc,
+          segment: lc.segment || meta[lc._id]?.segmentId || null,
+        }));
 
-      const uniqueCombined = Array.from(uniqueMap.values());
-      return res.json({ success: true, data: uniqueCombined });
+      const combined = [...mergedRemote, ...localOnly];
+      return res.json({ success: true, data: combined });
     }
 
     const meta = getCampaignMetadata();
@@ -660,8 +724,8 @@ router.all('/campaigns', async (req, res) => {
 router.all('/campaigns/count', async (req, res) => {
   try {
     const ownChatUrl = `${getBaseUrl()}/apis/v1/campaign/get-over-all-count`;
-    const apiKey = req.headers['ownchat-api-key'] || OWNCHAT_API_KEY;
-    const apiSecret = req.headers['ownchat-api-secret'] || OWNCHAT_API_SECRET;
+    const apiKey = req.headers['ownchat-api-key'] || getApiKey();
+    const apiSecret = req.headers['ownchat-api-secret'] || getApiSecret();
 
     let ownChatRes = null;
     try {
@@ -703,8 +767,8 @@ router.delete('/campaigns/:id', async (req, res) => {
       await fetch(`${getBaseUrl()}/apis/v1/campaign/${id}`, {
         method: 'DELETE',
         headers: {
-          'OWNCHAT-API-KEY': OWNCHAT_API_KEY,
-          'OWNCHAT-API-SECRET': OWNCHAT_API_SECRET,
+          'OWNCHAT-API-KEY': getApiKey(),
+          'OWNCHAT-API-SECRET': getApiSecret(),
         },
       }).catch(() => {});
     } catch (e) {}
@@ -713,6 +777,136 @@ router.delete('/campaigns/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── 7. POST /api/whatsapp/upload-media ──────────────────────────────────────
+router.post('/upload-media', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const ownChatUrl = `${getBaseUrl()}/apis/v1/media/upload`;
+    console.log(`📤 Uploading media file "${req.file.originalname}" to OwnChat media server...`);
+
+    const fileBlob = new Blob([req.file.buffer], { type: req.file.mimetype });
+    const formData = new FormData();
+    formData.append('file', fileBlob, req.file.originalname);
+
+    const apiKey = req.headers['ownchat-api-key'] || getApiKey();
+    const apiSecret = req.headers['ownchat-api-secret'] || getApiSecret();
+
+    const upRes = await fetch(ownChatUrl, {
+      method: 'POST',
+      headers: {
+        'OWNCHAT-API-KEY': apiKey,
+        'OWNCHAT-API-SECRET': apiSecret,
+      },
+      body: formData,
+    });
+
+    if (!upRes.ok) {
+      const errText = await upRes.text();
+      throw new Error(`OwnChat media upload failed with status ${upRes.status}: ${errText}`);
+    }
+
+    const data = await upRes.json();
+    if (data.status === 'success' && data.data && data.data.url) {
+      console.log('✅ OwnChat public URL resolved:', data.data.url);
+      return res.json({ success: true, url: data.data.url });
+    }
+
+    throw new Error(data.message || 'Invalid response structure from OwnChat upload API');
+  } catch (err) {
+    console.error('❌ Media upload failed:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── 8. Proxy routes for OwnChat Campaign APIs ─────────────────────────────────
+async function proxyOwnChatApi(req, res, targetPath, defaultBody = {}) {
+  try {
+    const baseUrl = getBaseUrl();
+    let url = `${baseUrl}${targetPath}`;
+    const queryKeys = Object.keys(req.query || {});
+    if (queryKeys.length > 0) {
+      const q = new URLSearchParams(req.query).toString();
+      url = `${url}?${q}`;
+    }
+
+    const apiKey = req.headers['ownchat-api-key'] || getApiKey();
+    const apiSecret = req.headers['ownchat-api-secret'] || getApiSecret();
+    const authHeader = req.headers['authorization'];
+
+    const headers = {
+      'OWNCHAT-API-KEY': apiKey,
+      'OWNCHAT-API-SECRET': apiSecret,
+      'Content-Type': 'application/json',
+    };
+    if (authHeader) headers['Authorization'] = authHeader;
+
+    const payload = (req.body && Object.keys(req.body).length > 0) ? req.body : defaultBody;
+
+    const response = await fetch(url, {
+      method: req.method || 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return res.json(data);
+    } else {
+      const errText = await response.text();
+      try {
+        const parsed = JSON.parse(errText);
+        return res.status(response.status).json(parsed);
+      } catch (e) {
+        return res.status(response.status).json({ success: false, error: errText });
+      }
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+// 1. Campaign List: POST /apis/v1/campaign?page=1&limit=30
+router.post(['/campaign', '/apis/v1/campaign'], async (req, res) => {
+  return proxyOwnChatApi(req, res, '/apis/v1/campaign', {
+    filterValue: '',
+    getAllType: 'all-campaigns',
+    filterType: 'bulk_csv',
+  });
+});
+
+// 2. Overall Count: POST /apis/v1/campaign/get-over-all-count
+router.post(['/campaign/get-over-all-count', '/apis/v1/campaign/get-over-all-count'], async (req, res) => {
+  return proxyOwnChatApi(req, res, '/apis/v1/campaign/get-over-all-count', {
+    filterType: 'bulk_csv',
+  });
+});
+
+// 3. ROI Analytics: POST /apis/v1/roi/analytics/campaigns
+router.post(['/roi/analytics/campaigns', '/apis/v1/roi/analytics/campaigns'], async (req, res) => {
+  return proxyOwnChatApi(req, res, '/apis/v1/roi/analytics/campaigns', {
+    campaignId: req.body?.campaignId || '',
+  });
+});
+
+// 4. Basic Details: POST /apis/v1/campaign/get-basic-detail
+router.post(['/campaign/get-basic-detail', '/apis/v1/campaign/get-basic-detail'], async (req, res) => {
+  return proxyOwnChatApi(req, res, '/apis/v1/campaign/get-basic-detail', {
+    campaignId: req.body?.campaignId || '',
+  });
+});
+
+// 5. Campaign Insights: POST /apis/v1/campaign/get-insights-v2
+router.post(['/campaign/get-insights-v2', '/apis/v1/campaign/get-insights-v2'], async (req, res) => {
+  return proxyOwnChatApi(req, res, '/apis/v1/campaign/get-insights-v2', {
+    campaignId: req.body?.campaignId || '',
+    filterType: req.body?.filterType || 'all',
+    buttonClicked: req.body?.buttonClicked || '',
+  });
 });
 
 export default router;

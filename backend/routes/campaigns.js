@@ -76,6 +76,17 @@ router.post('/', async (req, res) => {
     const { name, subject, template, audienceType, segment, staticList,
             fromName, fromEmail, scheduledAt } = req.body;
 
+    if (name) {
+      const escName = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const existing = await Campaign.findOne({
+        organization: orgId,
+        name: { $regex: new RegExp(`^${escName}$`, 'i') }
+      });
+      if (existing) {
+        return res.status(400).json({ error: 'A campaign with this name already exists. Duplicate campaign names are not allowed.' });
+      }
+    }
+
     const body = {
       name, subject, template, audienceType, segment, staticList,
       fromName, fromEmail,
@@ -103,6 +114,19 @@ router.patch('/:id', async (req, res) => {
     // Whitelist permitted fields — clients cannot overwrite organization, status, or stats
     const { name, subject, template, audienceType, segment, staticList,
             fromName, fromEmail, scheduledAt } = req.body;
+
+    if (name) {
+      const escName = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const existing = await Campaign.findOne({
+        organization: orgId,
+        _id: { $ne: req.params.id },
+        name: { $regex: new RegExp(`^${escName}$`, 'i') }
+      });
+      if (existing) {
+        return res.status(400).json({ error: 'A campaign with this name already exists. Duplicate campaign names are not allowed.' });
+      }
+    }
+
     const update = { name, subject, template, audienceType, segment, staticList,
                      fromName, fromEmail, scheduledAt,
                      lastUpdatedBy: req.session?.userId };
@@ -146,21 +170,22 @@ router.post('/:id/send', async (req, res) => {
 
     // Resolve recipients
     let recipients = [];
+    const activeEmailFilter = { emailStatus: { $ne: 'unsubscribed' }, allowBroadcast: { $ne: false } };
+
     if (campaign.audienceType === 'static') {
       recipients = await Customer.find({
-        _id:           { $in: campaign.staticList },
-        emailStatus:   'active',
-        allowBroadcast: true,
+        _id: { $in: campaign.staticList },
+        ...activeEmailFilter,
       }).lean();
     } else if (campaign.audienceType === 'segment' && campaign.segment) {
       const segment = await Segment.findById(campaign.segment);
       if (segment) {
         const query = buildSegmentQuery(orgIdStr, segment.conditions, segment.conditionGroups);
-        recipients = await Customer.find({ ...query, emailStatus: 'active', allowBroadcast: true }).lean();
+        recipients = await Customer.find({ ...query, ...activeEmailFilter }).lean();
       }
     } else {
-      // all opted-in contacts
-      recipients = await Customer.find({ belongsTo: orgIdStr, emailStatus: 'active', allowBroadcast: true }).lean();
+      // all active contacts
+      recipients = await Customer.find({ belongsTo: orgIdStr, ...activeEmailFilter }).lean();
     }
 
     if (recipients.length === 0) {

@@ -45,18 +45,32 @@ router.get('/', async (req, res) => {
       if ((isTextField && isGtLt) || (isGtLt && !isNum)) {
         filter._id = null;
       } else {
-        const attrFilter = { k: attrKey };
+        const escKey = attrKey.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const attrFilter = { k: { $regex: new RegExp(`^${escKey}$`, 'i') } };
         const valField = isNum ? 'v_num' : 'v_str';
 
-        switch (attrOp) {
-          case 'eq':       attrFilter[valField] = isNum ? numVal : attrVal; break;
-          case 'neq':      attrFilter[valField] = { $ne:  isNum ? numVal : attrVal }; break;
-          case 'gt':       attrFilter[valField] = { $gt:  isNum ? numVal : attrVal }; break;
-          case 'lt':       attrFilter[valField] = { $lt:  isNum ? numVal : attrVal }; break;
-          case 'gte':      attrFilter[valField] = { $gte: isNum ? numVal : attrVal }; break;
-          case 'lte':      attrFilter[valField] = { $lte: isNum ? numVal : attrVal }; break;
-          case 'contains': attrFilter[valField] = { $regex: attrVal, $options: 'i' }; break;
-          default:         attrFilter[valField] = attrVal;
+        if (!isNum) {
+          const escVal = String(attrVal).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          switch (attrOp) {
+            case 'eq':       attrFilter[valField] = { $regex: new RegExp(`^${escVal}$`, 'i') }; break;
+            case 'neq':      attrFilter[valField] = { $not: new RegExp(`^${escVal}$`, 'i') }; break;
+            case 'gt':       attrFilter[valField] = { $gt: attrVal }; break;
+            case 'lt':       attrFilter[valField] = { $lt: attrVal }; break;
+            case 'gte':      attrFilter[valField] = { $gte: attrVal }; break;
+            case 'lte':      attrFilter[valField] = { $lte: attrVal }; break;
+            case 'contains': attrFilter[valField] = { $regex: escVal, $options: 'i' }; break;
+            default:         attrFilter[valField] = { $regex: new RegExp(`^${escVal}$`, 'i') };
+          }
+        } else {
+          switch (attrOp) {
+            case 'eq':       attrFilter[valField] = numVal; break;
+            case 'neq':      attrFilter[valField] = { $ne: numVal }; break;
+            case 'gt':       attrFilter[valField] = { $gt: numVal }; break;
+            case 'lt':       attrFilter[valField] = { $lt: numVal }; break;
+            case 'gte':      attrFilter[valField] = { $gte: numVal }; break;
+            case 'lte':      attrFilter[valField] = { $lte: numVal }; break;
+            default:         attrFilter[valField] = numVal;
+          }
         }
 
         filter.$and = [{ attributes: { $elemMatch: attrFilter } }];
@@ -105,16 +119,23 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ── POST /api/customers ────────────────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
   try {
     const orgId = req.session.orgId;
     const { name, phoneNo, email, attributes = [], ...rest } = req.body;
 
+    if (email && email.trim()) {
+      const cleanEmail = email.trim().toLowerCase();
+      const existing = await Customer.findOne({ belongsTo: orgId, email: cleanEmail });
+      if (existing) {
+        return res.status(400).json({ error: 'A customer with this email address already exists.' });
+      }
+    }
+
     const customer = await Customer.create({
       name: name || 'Unknown Customer',
       phoneNo: phoneNo || '',
-      email: email || '',
+      email: email ? email.trim().toLowerCase() : '',
       belongsTo: orgId,
       attributes,
       createdBy: req.session?.userId,
@@ -294,14 +315,51 @@ router.post('/import', upload.single('file'), async (req, res) => {
       };
     });
 
+    // Deduplicate docs within the imported CSV batch case-insensitively by email and phone
+    const uniqueDocsMap = new Map();
+    for (const doc of docs) {
+      const emailKey = (doc.email || '').trim().toLowerCase();
+      const phoneKey = (doc.phoneNo || '').replace(/\D/g, '');
+      const dedupKey = emailKey ? `email:${emailKey}` : (phoneKey ? `phone:${phoneKey}` : `name:${doc.name.toLowerCase()}`);
+      if (!uniqueDocsMap.has(dedupKey)) {
+        uniqueDocsMap.set(dedupKey, doc);
+      }
+    }
+    const dedupedDocs = Array.from(uniqueDocsMap.values());
+
+    // Filter out records that already exist in DB case-insensitively
+    const emailsInBatch = dedupedDocs.map(d => d.email).filter(Boolean).map(e => e.toLowerCase());
+    const phonesInBatch = dedupedDocs.map(d => d.phoneNo).filter(Boolean);
+
+    const existingInDb = await Customer.find({
+      belongsTo: orgId,
+      $or: [
+        { email: { $in: emailsInBatch } },
+        { phoneNo: { $in: phonesInBatch } }
+      ]
+    }).select('email phoneNo').lean();
+
+    const existingEmailsSet = new Set(existingInDb.map(c => (c.email || '').toLowerCase()));
+    const existingPhonesSet = new Set(existingInDb.map(c => c.phoneNo));
+
+    const finalDocsToInsert = dedupedDocs.filter(doc => {
+      const e = (doc.email || '').toLowerCase();
+      const p = doc.phoneNo;
+      if (e && existingEmailsSet.has(e)) return false;
+      if (p && existingPhonesSet.has(p)) return false;
+      return true;
+    });
+
     let insertedDocs = [];
-    try {
-      insertedDocs = await Customer.insertMany(docs, { ordered: false });
-    } catch (insertErr) {
-      insertedDocs = insertErr.insertedDocs || insertErr.result?.insertedDocs || docs;
+    if (finalDocsToInsert.length > 0) {
+      try {
+        insertedDocs = await Customer.insertMany(finalDocsToInsert, { ordered: false });
+      } catch (insertErr) {
+        insertedDocs = insertErr.insertedDocs || insertErr.result?.insertedDocs || finalDocsToInsert;
+      }
     }
 
-    res.json({ success: true, count: docs.length, inserted: insertedDocs.length, data: docs });
+    res.json({ success: true, count: rawRows.length, inserted: insertedDocs.length, data: finalDocsToInsert });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

@@ -124,6 +124,7 @@ router.post('/generate-image', async (req, res) => {
       organization: orgId,
       filename,
       originalName: prompt.slice(0, 30).trim() + '.png',
+      prompt,
       url,
       mimeType,
       size: buffer.length,

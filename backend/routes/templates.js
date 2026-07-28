@@ -46,6 +46,19 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const orgId = req.session?.orgId;
+    const { name } = req.body;
+
+    if (name) {
+      const escName = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const existing = await EmailTemplate.findOne({
+        organization: orgId,
+        name: { $regex: new RegExp(`^${escName}$`, 'i') }
+      });
+      if (existing) {
+        return res.status(400).json({ error: 'A template with this name already exists. Duplicate template names are not allowed.' });
+      }
+    }
+
     const template = await EmailTemplate.create({
       ...req.body,
       organization: orgId,
@@ -60,6 +73,20 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   try {
     const orgId = req.session.orgId;
+    const { name } = req.body;
+
+    if (name) {
+      const escName = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const existing = await EmailTemplate.findOne({
+        organization: orgId,
+        _id: { $ne: req.params.id },
+        name: { $regex: new RegExp(`^${escName}$`, 'i') }
+      });
+      if (existing) {
+        return res.status(400).json({ error: 'A template with this name already exists. Duplicate template names are not allowed.' });
+      }
+    }
+
     const template = await EmailTemplate.findOneAndUpdate(
       { _id: req.params.id, organization: orgId },
       { ...req.body, lastUpdatedBy: req.session?.userId },
