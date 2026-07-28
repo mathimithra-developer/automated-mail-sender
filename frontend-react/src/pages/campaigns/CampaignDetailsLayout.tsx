@@ -13,7 +13,7 @@ import {
   Clock,
   MessageSquare,
 } from 'lucide-react';
-import { api } from '../../services/api';
+import { api, campaignApi } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
 export interface CampaignDetailContextType {
@@ -21,6 +21,9 @@ export interface CampaignDetailContextType {
   loading: boolean;
   refetch: () => Promise<void>;
   recipients: any[];
+  basicDetail: any;
+  insightsData: any;
+  roiData: any;
   stats: {
     total: number;
     sent: number;
@@ -53,25 +56,56 @@ export const CampaignDetailsLayout: React.FC = () => {
   const { showToast } = useToast();
 
   const [campaign, setCampaign] = useState<any>(null);
+  const [basicDetail, setBasicDetail] = useState<any>(null);
+  const [insightsData, setInsightsData] = useState<any>(null);
+  const [roiData, setRoiData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [recipients, setRecipients] = useState<any[]>([]);
 
-  const fetchCampaignData = async () => {
+  const fetchCampaignData = async (isSilent = false) => {
     if (!id) return;
-    setLoading(true);
+    if (!isSilent) setLoading(true);
     try {
+      const [basicRes, insightsRes, roiRes] = await Promise.all([
+        campaignApi.getBasicDetail(id).catch(() => null),
+        campaignApi.getInsights(id).catch(() => null),
+        campaignApi.getRoiAnalytics(id).catch(() => null),
+      ]);
+
+      const fetchedBasic = basicRes?.data || basicRes?.campaign || basicRes || null;
+      const fetchedInsights = insightsRes?.data || insightsRes?.insights || insightsRes || null;
+      const fetchedRoi = roiRes?.data || roiRes?.analytics || roiRes?.roi || roiRes || null;
+
+      if (fetchedBasic) setBasicDetail(fetchedBasic);
+      if (fetchedInsights) setInsightsData(fetchedInsights);
+      if (fetchedRoi) setRoiData(fetchedRoi);
+
       // 1. Try to fetch as Email Campaign
       let campData: any = null;
       let isWhatsApp = false;
 
-      try {
-        const res = await api.get(`/api/campaigns/${id}`);
-        if (res?.data) {
-          campData = res.data;
-          campData._type = 'email';
-        }
-      } catch (_) {
-        // Not an email campaign or id is WhatsApp ID
+      if (fetchedBasic && (fetchedBasic.name || fetchedBasic.campaignName)) {
+        campData = {
+          _id: fetchedBasic._id || fetchedBasic.id || id,
+          name: fetchedBasic.name || fetchedBasic.campaignName,
+          type: fetchedBasic.type || fetchedBasic.campaignType || 'whatsapp',
+          status: fetchedBasic.status || 'completed',
+          createdAt: fetchedBasic.createdAt || fetchedBasic.createdDate || new Date().toISOString(),
+          template: fetchedBasic.template || { name: fetchedBasic.templateName || 'Standard Template' },
+          segment: fetchedBasic.segment || { name: fetchedBasic.segmentName || 'Recipients' },
+          stats: fetchedBasic.stats || fetchedInsights || {},
+          _type: fetchedBasic.type === 'email' ? 'email' : 'whatsapp',
+        };
+      }
+
+      if (!campData) {
+        try {
+          const res = await api.get(`/api/campaigns/${id}`);
+          if (res?.data) {
+            campData = res.data;
+            campData._type = 'email';
+          }
+        } catch (_) {}
       }
 
       // 2. If not email, search in WhatsApp campaigns list
@@ -88,7 +122,6 @@ export const CampaignDetailsLayout: React.FC = () => {
       }
 
       if (!campData) {
-        // Fallback dummy structure if network or offline
         campData = {
           _id: id,
           name: 'WhatsApp Marketing Campaign',
@@ -106,10 +139,8 @@ export const CampaignDetailsLayout: React.FC = () => {
       // 3. Resolve customer/recipient list
       let customerList: any[] = [];
 
-      // Safe check for segment ID
       let segmentId = campData.segment?._id || campData.segment;
 
-      // Fallback: If segment is not resolved, try to match by campaign name matching words in segment names
       if (!segmentId) {
         try {
           const segmentsRes = await api.get('/api/segments');
@@ -118,11 +149,8 @@ export const CampaignDetailsLayout: React.FC = () => {
           const matchedSegment = segmentsList.find((seg: any) => {
             const segNameClean = (seg.name || '').toLowerCase();
             const campNameClean = (campData.name || '').toLowerCase();
-            
-            // Clean tokens (e.g. "vip", "segment", "customers")
-            const segTokens = segNameClean.split(/[^a-z0-9]/).filter((t: string) => t.length > 2); // ignore short words
+            const segTokens = segNameClean.split(/[^a-z0-9]/).filter((t: string) => t.length > 2);
             if (segTokens.length === 0) return false;
-            
             const firstToken = segTokens[0];
             return firstToken && campNameClean.includes(firstToken);
           });
@@ -142,7 +170,6 @@ export const CampaignDetailsLayout: React.FC = () => {
         } catch (_) {}
       }
 
-      // Only fall back to all customers if we genuinely couldn't find a segment or segment customers
       if (customerList.length === 0) {
         try {
           const custRes = await api.get('/api/customers?limit=50');
@@ -150,111 +177,139 @@ export const CampaignDetailsLayout: React.FC = () => {
         } catch (_) {}
       }
 
-      // Build synthesized recipient status records
-      const totalRecs = campData.stats?.total || customerList.length || 10;
-      const sentCount = campData.stats?.sent ?? totalRecs;
-      const deliveredCount = campData.stats?.delivered ?? Math.round(sentCount * 0.9);
-      const readCount = campData.stats?.read ?? Math.round(deliveredCount * 0.7);
-      // Determine failed recipient count directly from campaign stats
-      const failedCount = campData.stats?.failed ?? (totalRecs > deliveredCount ? totalRecs - deliveredCount : 0);
-      const adjustedFailedCount = customerList.length > 0
-        ? Math.min(customerList.length, failedCount)
-        : failedCount;
+      let apiLogs: any[] = [];
+      try {
+        const logsRes = await api.get(`/api/campaigns/${id}/logs`);
+        const rawList = logsRes?.data || logsRes;
+        if (Array.isArray(rawList) && rawList.length > 0) {
+          apiLogs = rawList;
+        }
+      } catch (_) {}
 
-      // Map slice: for WhatsApp, map only the actual segment customers; for email, keep existing logic
-      const sliceLimit = isWhatsApp ? customerList.length : Math.max(totalRecs, 15);
-      const mappedRecipients = customerList.slice(0, sliceLimit).map((c, i) => {
-        let status = 'delivered';
-        let failReason = '';
-        let errorCode = '';
+      let mappedRecipients: any[] = [];
 
-        if (i < adjustedFailedCount) {
-          status = 'failed';
-          if (i % 2 === 0) {
-            errorCode = '131026';
-            failReason = 'User not on WhatsApp';
+      if (apiLogs.length > 0) {
+        mappedRecipients = apiLogs.map((log: any, i: number) => {
+          const cust = typeof log.customer === 'object' && log.customer ? log.customer : {};
+          const isFailed = log.status === 'failed';
+          const sentDate = log.sentAt || log.createdAt || campData.createdAt || Date.now();
+          const baseTimeString = new Date(sentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+          return {
+            id: log._id || cust._id || `log_${i}`,
+            name: cust.name || log.email || `Recipient ${i + 1}`,
+            phone: cust.phone || cust.phoneNo || '—',
+            email: log.email || cust.email || '—',
+            status: log.status || 'sent',
+            failureReason: log.failureReason || (isFailed ? 'Email Delivery Bounced' : ''),
+            errorCode: isFailed ? '550' : '',
+            sentTime: baseTimeString,
+            deliveredTime: log.status === 'delivered' || log.status === 'read' ? baseTimeString : '—',
+            readTime: log.status === 'read' ? baseTimeString : '—',
+            failedTime: isFailed ? baseTimeString : '—',
+            messageId: log.messageId || '—',
+          };
+        });
+      } else {
+        const failedCount = Number(fetchedInsights?.failed ?? campData.stats?.failed) || 0;
+        const totalRecs = Number(fetchedInsights?.total ?? campData.stats?.total) || customerList.length || 0;
+        const isAllFailed = failedCount > 0 && failedCount >= totalRecs;
+
+        const sentCount = isAllFailed ? 0 : Number(fetchedInsights?.sent ?? campData.stats?.sent ?? Math.max(0, totalRecs - failedCount));
+        const deliveredCount = isAllFailed ? 0 : Number(fetchedInsights?.delivered ?? campData.stats?.delivered ?? sentCount);
+        const readCount = isAllFailed ? 0 : Number(fetchedInsights?.read ?? campData.stats?.read ?? 0);
+        const adjustedFailedCount = customerList.length > 0 ? Math.min(customerList.length, failedCount) : failedCount;
+
+        const sliceLimit = customerList.length > 0 ? customerList.length : Math.max(totalRecs, 3);
+        mappedRecipients = (customerList.length > 0 ? customerList : Array.from({ length: sliceLimit })).map((c: any = {}, i) => {
+          let status = 'delivered';
+          let failReason = '';
+          let errorCode = '';
+
+          if (i < adjustedFailedCount) {
+            status = 'failed';
+            errorCode = '100';
+            failReason = '(#100) Invalid parameter or phone unreachable';
+          } else if (i < adjustedFailedCount + readCount) {
+            status = 'read';
+          } else if (i < adjustedFailedCount + deliveredCount) {
+            status = 'delivered';
           } else {
-            errorCode = '131049';
-            failReason = 'Invalid Number';
+            status = 'sent';
           }
-        } else if (i < readCount + adjustedFailedCount) {
-          status = 'read';
-        } else if (i < deliveredCount + adjustedFailedCount) {
-          status = 'delivered';
-        } else {
-          status = 'sent';
-        }
 
-        const baseTime = new Date(campData.createdAt || Date.now()).getTime();
-
-        const rawPhone = c.phoneNo || c.phone || c.phoneNumber || c.phone_number || c.mobile || '';
-        let displayPhone = rawPhone;
-        if (rawPhone) {
-          let digits = String(rawPhone).replace(/\D/g, '').replace(/^0+/, '');
-          if (digits.length === 10) digits = '91' + digits;
-          if (digits.length === 12 && digits.startsWith('91')) {
-            displayPhone = `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
-          } else if (digits.length > 0) {
-            displayPhone = `+${digits}`;
+          const baseTime = new Date(campData.createdAt || Date.now()).getTime();
+          const rawPhone = c.phoneNo || c.phone || c.phoneNumber || c.phone_number || c.mobile || '';
+          let displayPhone = rawPhone;
+          if (rawPhone) {
+            let digits = String(rawPhone).replace(/\D/g, '').replace(/^0+/, '');
+            if (digits.length === 10) digits = '91' + digits;
+            if (digits.length === 12 && digits.startsWith('91')) {
+              displayPhone = `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+            } else if (digits.length > 0) {
+              displayPhone = `+${digits}`;
+            }
           }
-        }
-        if (!displayPhone) {
-          displayPhone = `+91 98765 ${10000 + i}`;
-        }
+          if (!displayPhone) {
+            displayPhone = `+91 98765 ${10000 + i}`;
+          }
 
-        return {
-          id: c._id || c.id || `rec_${i}`,
-          name: c.name || c.firstName || `Customer ${i + 1}`,
-          phone: displayPhone,
-          email: c.email || `customer${i}@example.com`,
-          status,
-          sentTime: new Date(baseTime + i * 1200).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          deliveredTime: status !== 'failed' ? new Date(baseTime + i * 1200 + 4000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
-          readTime: status === 'read' ? new Date(baseTime + i * 1200 + 12000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
-          failedTime: status === 'failed' ? new Date(baseTime + i * 1200 + 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
-          failureReason: failReason,
-          errorCode: errorCode,
-          messageId: `wamid.HBgL${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-        };
-      });
+          return {
+            id: c._id || c.id || `rec_${i}`,
+            name: c.name || c.firstName || `Customer ${i + 1}`,
+            phone: displayPhone,
+            email: c.email || `customer${i}@example.com`,
+            status,
+            failureReason: failReason,
+            errorCode,
+            sentTime: new Date(baseTime + i * 1200).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            deliveredTime: status !== 'failed' ? new Date(baseTime + i * 1200 + 4000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+            readTime: status === 'read' ? new Date(baseTime + i * 1200 + 12000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+            failedTime: status === 'failed' ? new Date(baseTime + i * 1200).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+            messageId: `msg_${Math.random().toString(36).substring(2, 9)}`,
+          };
+        });
+      }
 
       setRecipients(mappedRecipients);
     } catch (err: any) {
-      showToast('Error', 'Failed to load campaign detail', 'error');
+      if (!isSilent) showToast('Error', 'Failed to load campaign detail', 'error');
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchCampaignData();
+    const interval = setInterval(() => {
+      fetchCampaignData(true);
+    }, 30000);
+    return () => clearInterval(interval);
   }, [id]);
 
   const isWhatsAppCampaign = campaign?._type === 'whatsapp' || campaign?.type === 'whatsapp';
 
-  // Derived Statistics
-  const total = isWhatsAppCampaign
-    ? recipients.length
-    : (campaign?.stats?.total || recipients.length || 0);
+  // Derived Statistics incorporating live Insights API if present
+  const total = Number(insightsData?.total ?? (isWhatsAppCampaign ? recipients.length : (campaign?.stats?.total || recipients.length || 0)));
 
-  const sent = isWhatsAppCampaign
+  const sent = Number(insightsData?.sent ?? (isWhatsAppCampaign
     ? recipients.filter((r: any) => r.status === 'sent' || r.status === 'delivered' || r.status === 'read' || r.status === 'failed').length
-    : (campaign?.stats?.sent ?? total);
+    : (campaign?.stats?.sent ?? total)));
 
-  const delivered = isWhatsAppCampaign
+  const delivered = Number(insightsData?.delivered ?? (isWhatsAppCampaign
     ? recipients.filter((r: any) => r.status === 'delivered' || r.status === 'read').length
-    : (campaign?.stats?.delivered ?? Math.round(sent * 0.9));
+    : (campaign?.stats?.delivered ?? Math.round(sent * 0.9))));
 
-  const read = isWhatsAppCampaign
+  const read = Number(insightsData?.read ?? (isWhatsAppCampaign
     ? recipients.filter((r: any) => r.status === 'read').length
-    : (campaign?.stats?.read ?? Math.round(delivered * 0.7));
+    : (campaign?.stats?.read ?? Math.round(delivered * 0.7))));
 
-  const failed = isWhatsAppCampaign
+  const failed = Number(insightsData?.failed ?? (isWhatsAppCampaign
     ? recipients.filter((r: any) => r.status === 'failed').length
-    : (campaign?.stats?.failed ?? Math.max(0, total - delivered));
+    : (campaign?.stats?.failed ?? Math.max(0, total - delivered))));
 
-  const clicked = campaign?.stats?.clicked ?? Math.round(read * 0.4);
-  const replied = Math.round(read * 0.15);
+  const clicked = Number(insightsData?.clicked ?? campaign?.stats?.clicked ?? Math.round(read * 0.4));
+  const replied = Number(insightsData?.replies ?? insightsData?.replied ?? Math.round(read * 0.15));
 
   const deliveryRate = total > 0 ? Math.round((delivered / total) * 100) : 100;
   const readRate = delivered > 0 ? Math.round((read / delivered) * 100) : 0;
@@ -273,7 +328,7 @@ export const CampaignDetailsLayout: React.FC = () => {
     deliveryRate,
     readRate,
     failureRate,
-    avgDeliveryTime: '1.4s',
+    avgDeliveryTime: insightsData?.avgDeliveryTime || '1.4s',
   };
 
   const errorsList = recipients.filter((r) => r.status === 'failed');
@@ -315,6 +370,9 @@ export const CampaignDetailsLayout: React.FC = () => {
         loading,
         refetch: fetchCampaignData,
         recipients,
+        basicDetail,
+        insightsData,
+        roiData,
         stats,
         errorsList,
       }}

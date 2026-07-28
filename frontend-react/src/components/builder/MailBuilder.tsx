@@ -1,4 +1,5 @@
 import React, { useReducer, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { builderReducer, initialBuilderState, initialTemplateData, BuilderState } from './builderReducer';
 import { Section } from './Section';
 import { ExportModal } from './ExportModal';
@@ -41,6 +42,7 @@ import {
   ChevronLeft,
   FilePlus,
   Search,
+  ArrowLeft,
 } from 'lucide-react';
 
 interface MailBuilderProps {
@@ -81,6 +83,7 @@ const getRestoredBuilderState = (): BuilderState | null => {
 };
 
 export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) => {
+  const navigate = useNavigate();
   const { showToast } = useToast();
 
   // Lazy initializer: restore state from localStorage synchronously on mount
@@ -124,6 +127,7 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
   });
   const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
   const [isNewConfirmOpen, setIsNewConfirmOpen] = useState(false);
+  const [isBackConfirmOpen, setIsBackConfirmOpen] = useState(false);
   const [isCatalogCollapsed, setIsCatalogCollapsed] = useState<boolean>(false);
   const [catalogSearch, setCatalogSearch] = useState<string>('');
   const [templateId, setTemplateId] = useState<string | undefined>(() => {
@@ -434,16 +438,10 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
   };
 
   const handleSelectSampleTemplate = () => {
-    try {
-      localStorage.removeItem('ms_builder_draft');
-      localStorage.removeItem('ms_builder_name');
-      localStorage.removeItem('ms_builder_template_id');
-    } catch (e) {}
-    setSavedDraftName(null);
-    dispatch({ type: 'LOAD_TEMPLATE', template: initialTemplateData });
-    setTemplateId(undefined);
     setIsEntryModalOpen(false);
-    showToast('Sample Loaded', 'Loaded default newsletter layout', 'success');
+    setActiveRightTab('templates');
+    setShowRightSidebar(true);
+    showToast('Template Library', 'Select a template from the library to preview and edit', 'info');
   };
 
   const handleResumeDraft = () => {
@@ -589,8 +587,46 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
           boxSizing: 'border-box',
         }}
       >
-        {/* Left Side: Title & Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+        {/* Left Side: Back Button, Title & Status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (hasUnsavedChanges) {
+                setIsBackConfirmOpen(true);
+              } else {
+                navigate(-1);
+              }
+            }}
+            style={{
+              border: '1px solid #cbd5e1',
+              background: '#ffffff',
+              color: '#0f172a',
+              padding: '5px 10px',
+              borderRadius: 6,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              fontSize: 12,
+              fontWeight: 600,
+              flexShrink: 0,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f8fafc';
+              e.currentTarget.style.borderColor = '#94a3b8';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#ffffff';
+              e.currentTarget.style.borderColor = '#cbd5e1';
+            }}
+            title="Go back to previous page"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <input
               type="text"
@@ -1496,6 +1532,21 @@ export const MailBuilder: React.FC<MailBuilderProps> = ({ initialTemplateId }) =
           showToast('Edits Discarded', 'Unsaved changes discarded and canvas reset', 'info');
         }}
         onCancel={() => setIsDiscardConfirmOpen(false)}
+      />
+
+      {/* Back Navigation Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={isBackConfirmOpen}
+        title="Unsaved Changes"
+        message="You have unsaved changes in Mail Builder. Going back will discard your edits. Are you sure you want to leave?"
+        confirmLabel="Leave & Discard"
+        cancelLabel="Keep Editing"
+        variant="warning"
+        onConfirm={() => {
+          setIsBackConfirmOpen(false);
+          navigate(-1);
+        }}
+        onCancel={() => setIsBackConfirmOpen(false)}
       />
     </div>
   );

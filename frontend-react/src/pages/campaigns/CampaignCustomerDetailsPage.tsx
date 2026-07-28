@@ -200,7 +200,7 @@ export const CampaignCustomerDetailsPage: React.FC = () => {
                 <td style={{ ...tdStyle, color: '#64748B' }}>{r.deliveredTime}</td>
                 <td style={{ ...tdStyle, color: '#64748B' }}>{r.readTime}</td>
                 <td style={{ ...tdStyle, color: '#64748B' }}>{r.failedTime}</td>
-                <td style={{ ...tdStyle, color: r.failureReason ? '#EF4444' : '#94A3B8', fontSize: 12 }}>
+                <td style={{ ...tdStyle, color: r.failureReason ? '#EF4444' : '#94A3B8', fontSize: 12 }} title={r.failureReason || ''}>
                   {r.failureReason || '—'}
                 </td>
                 <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 11, color: '#94A3B8', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>

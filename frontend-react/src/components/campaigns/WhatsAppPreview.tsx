@@ -28,6 +28,7 @@ interface VarMappingItem {
   url?: string;
   field: string;
   fallbackValue: string;
+  previewUrl?: string;
   cardIndex?: number;
 }
 
@@ -294,15 +295,13 @@ export const WhatsAppPreview: React.FC<WhatsAppPreviewProps> = ({
                     const cardButtons = card.components?.find((c: any) => c.type === 'BUTTONS');
 
                     // Determine Card Image / Video URL
-                    let cardImgUrl = sampleMediaUrl;
+                    let cardImgUrl = '';
                     if (cardHeader) {
                       const mappedItem = variableMappings.find(
                         (m) => m.componentType === 'HEADER' && m.cardIndex === cardIdx && m.varIndex === 1
                       );
-                      if (mappedItem) {
-                        cardImgUrl = getSampleValueForField(mappedItem.field, mappedItem.fallbackValue);
-                      } else if (cardHeader.example?.header_handle?.[0]) {
-                        cardImgUrl = cardHeader.example.header_handle[0];
+                      if (mappedItem && (mappedItem.fallbackValue.startsWith('http') || mappedItem.fallbackValue.startsWith('blob:'))) {
+                        cardImgUrl = mappedItem.fallbackValue;
                       }
                     }
 
@@ -312,14 +311,30 @@ export const WhatsAppPreview: React.FC<WhatsAppPreviewProps> = ({
                         {cardHeader && (
                           <div className="wa-carousel-card-media">
                             {cardHeader.format === 'IMAGE' && (
-                              <img
-                                src={cardImgUrl}
-                                alt={`Card ${cardIdx + 1}`}
-                                className="wa-carousel-card-img"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = sampleMediaUrl;
-                                }}
-                              />
+                              cardImgUrl ? (
+                                <img
+                                  src={cardImgUrl}
+                                  alt={`Card ${cardIdx + 1}`}
+                                  className="wa-carousel-card-img"
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <div style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  height: 140,
+                                  background: '#f8fafc',
+                                  color: '#64748b',
+                                  borderBottom: '1px solid #e2e8f0'
+                                }}>
+                                  <ImageIcon style={{ width: 34, height: 34, color: '#94a3b8', marginBottom: 4 }} />
+                                  <span style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>No image available</span>
+                                </div>
+                              )
                             )}
                             {cardHeader.format === 'VIDEO' && (
                               <div className="wa-carousel-card-video">
@@ -375,14 +390,45 @@ export const WhatsAppPreview: React.FC<WhatsAppPreviewProps> = ({
                     {/* Header Format: IMAGE */}
                     {headerComp.format === 'IMAGE' && (
                       <div className="wa-media-container">
-                        <img
-                          src={sampleMediaUrl}
-                          alt="Header Banner"
-                          className="wa-media-image"
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = 'none';
-                          }}
-                        />
+                        {(() => {
+                          const mappedHeaderItem = variableMappings.find(
+                            (m) => m.componentType === 'HEADER' && m.cardIndex === undefined
+                          );
+                          const rawVal = mappedHeaderItem?.fallbackValue || mappedHeaderItem?.previewUrl || '';
+                          const headerImgUrl = (rawVal.startsWith('http') || rawVal.startsWith('blob:'))
+                            ? rawVal
+                            : '';
+
+                          if (headerImgUrl) {
+                            return (
+                              <img
+                                src={headerImgUrl}
+                                alt="Header Banner"
+                                className="wa-media-image"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            );
+                          }
+
+                          return (
+                            <div style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '24px 16px',
+                              background: '#f8fafc',
+                              border: '2px dashed #cbd5e1',
+                              borderRadius: 8,
+                              color: '#64748b'
+                            }}>
+                              <ImageIcon style={{ width: 44, height: 44, color: '#94a3b8', marginBottom: 6 }} />
+                              <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>No image available</span>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
 

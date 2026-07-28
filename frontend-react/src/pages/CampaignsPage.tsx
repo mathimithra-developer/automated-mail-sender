@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Send, Plus, X, Trash2, MessageSquare, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2, Eye, AlertTriangle, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Campaign, EmailTemplate, Segment, WhatsAppCampaign } from '../types';
-import { api } from '../services/api';
+import { api, campaignApi } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { WhatsAppCampaignModal } from '../components/campaigns/WhatsAppCampaignModal';
@@ -13,6 +13,7 @@ export const CampaignsPage: React.FC = () => {
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [whatsAppCampaigns, setWhatsAppCampaigns] = useState<WhatsAppCampaign[]>([]);
+  const [overallCounts, setOverallCounts] = useState<any>(null);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -80,41 +81,113 @@ export const CampaignsPage: React.FC = () => {
 
   const [dispatchingId, setDispatchingId] = useState<string | null>(null);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
-      const [campRes, tmplRes, segRes, settingsRes, waCampRes] = await Promise.all([
+      const [campRes, tmplRes, segRes, settingsRes, waCampRes, ownChatListRes, ownChatCountRes] = await Promise.all([
         api.get('/api/campaigns').catch(() => ({ data: [] })),
         api.get('/api/templates').catch(() => ({ data: [] })),
         api.get('/api/segments').catch(() => ({ data: [] })),
         api.get('/api/settings').catch(() => ({ data: null })),
         api.post('/api/whatsapp/campaigns').catch(() => ({ data: [] })),
+        campaignApi.getCampaigns(page, 30).catch(() => null),
+        campaignApi.getOverallCount().catch(() => null),
       ]);
 
       setCampaigns(Array.isArray(campRes?.data) ? campRes.data : Array.isArray(campRes) ? campRes : []);
       setTemplates(Array.isArray(tmplRes?.data) ? tmplRes.data : Array.isArray(tmplRes) ? tmplRes : []);
       setSegments(Array.isArray(segRes?.data) ? segRes.data : Array.isArray(segRes) ? segRes : []);
-      setWhatsAppCampaigns(Array.isArray(waCampRes?.data) ? waCampRes.data : Array.isArray(waCampRes) ? waCampRes : []);
+
+      let waList: WhatsAppCampaign[] = Array.isArray(waCampRes?.data) ? waCampRes.data : Array.isArray(waCampRes) ? waCampRes : [];
+
+      if (ownChatListRes) {
+        const rawBulk = Array.isArray(ownChatListRes?.data?.bulkUploads)
+          ? ownChatListRes.data.bulkUploads
+          : Array.isArray(ownChatListRes?.bulkUploads)
+          ? ownChatListRes.bulkUploads
+          : Array.isArray(ownChatListRes?.campaigns)
+          ? ownChatListRes.campaigns
+          : Array.isArray(ownChatListRes?.data)
+          ? ownChatListRes.data
+          : Array.isArray(ownChatListRes)
+          ? ownChatListRes
+          : [];
+
+        if (rawBulk.length > 0) {
+          const remoteMapped: WhatsAppCampaign[] = rawBulk.map((c: any) => {
+            const createdNum = Number(c.createdCount) || Number(c.totalCount) || 0;
+            const failedNum = Number(c.failedCount) || 0;
+            const isFinished = c.isFinished === true;
+            const isAllFailed = isFinished && failedNum > 0 && failedNum >= createdNum;
+            const isScheduled = c.status === 'scheduled' || c.publishMode === 'schedule';
+            const isInProgress = !isFinished && !isScheduled;
+
+            let finalStatus = 'completed';
+            if (isInProgress) finalStatus = 'in_progress';
+            else if (isScheduled) finalStatus = 'scheduled';
+            else if (isAllFailed) finalStatus = 'failed';
+
+            return {
+              _id: c._id || c.id || `wa_${Math.random().toString(36).substring(2, 7)}`,
+              name: c.name || c.campaignName || 'WhatsApp Bulk Campaign',
+              templateId: c.templateId || 'WhatsApp Template',
+              status: finalStatus,
+              type: 'whatsapp' as const,
+              csvFileKey: c.sourceUrl || c.csvFileKey,
+              createdAt: c.createdAt || new Date().toISOString(),
+              stats: {
+                total: createdNum || 1,
+                sent: isFinished ? Math.max(0, createdNum - failedNum) : 0,
+                delivered: isFinished ? Math.max(0, createdNum - failedNum) : 0,
+                read: 0,
+                failed: failedNum,
+              },
+            };
+          });
+
+          // Merge without duplicating existing items
+          const existingIds = new Set(remoteMapped.map(r => String(r._id)));
+          const localOnly = waList.filter(l => !existingIds.has(String(l._id)));
+          waList = [...remoteMapped, ...localOnly];
+        }
+      }
+
+      setWhatsAppCampaigns(waList);
+
+      if (ownChatCountRes) {
+        setOverallCounts(ownChatCountRes.data || ownChatCountRes);
+      }
 
       if (settingsRes && settingsRes.data) {
         if (settingsRes.data.senderName) setFromName(settingsRes.data.senderName);
         if (settingsRes.data.senderEmail) setFromEmail(settingsRes.data.senderEmail);
       }
     } catch (err: any) {
-      showToast('Error loading campaigns', err.message, 'error');
+      if (!isSilent) showToast('Error loading campaigns', err.message, 'error');
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
-  }, []);
+    const timer = setInterval(() => {
+      loadData(true);
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [page]);
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !subject || !templateId || !fromEmail) {
       showToast('Required', 'Name, Subject, Template, and Sender Email are required', 'warning');
+      return;
+    }
+
+    const cleanName = name.trim().toLowerCase();
+    const existing = campaigns.find((c) => (c.name || '').trim().toLowerCase() === cleanName);
+    if (existing) {
+      showToast('Duplicate Name', 'A campaign with this name already exists. Duplicate campaign names are not allowed.', 'warning');
       return;
     }
 
@@ -244,21 +317,30 @@ export const CampaignsPage: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <button
-            className="btn btn-secondary"
-            style={{
-              borderColor: '#2563eb',
-              color: '#2563eb',
-              background: 'rgba(37, 99, 235, 0.06)',
-              fontWeight: 600,
-            }}
-            onClick={() => setShowWhatsAppModal(true)}
-          >
-            <MessageSquare style={{ width: 14, height: 14 }} /> ✅ Create New Campaign
-          </button>
-          <button className="btn btn-primary" onClick={handleOpenDrawer}>
-            <Plus style={{ width: 14, height: 14 }} /> New Campaign
-          </button>
+          {campaignTab !== 'email' && (
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowWhatsAppModal(true)}
+              style={{
+                gap: 6,
+                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                borderColor: '#2563eb',
+                fontWeight: 600
+              }}
+            >
+              <MessageSquare style={{ width: 15, height: 15 }} /> Create WhatsApp Campaign
+            </button>
+          )}
+
+          {campaignTab !== 'whatsapp' && (
+            <button
+              className={campaignTab === 'email' ? 'btn btn-primary' : 'btn btn-secondary'}
+              onClick={() => handleOpenDrawer()}
+              style={{ gap: 6, fontWeight: 600 }}
+            >
+              <Plus style={{ width: 15, height: 15 }} /> Create Email Campaign
+            </button>
+          )}
         </div>
       </div>
 
@@ -336,10 +418,17 @@ export const CampaignsPage: React.FC = () => {
                         ? new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                         : '—';
                       const sentCount = c.stats?.sent || 0;
+                      const failedCount = c.stats?.failed || 0;
                       const openedCount = c.stats?.opened || 0;
                       const clickedCount = c.stats?.clicked || 0;
                       const bouncedCount = c.stats?.bounced || 0;
+                      const totalAudience = c.stats?.total || (sentCount + failedCount) || 0;
                       const deliveryPct = sentCount > 0 ? Math.round(((sentCount - bouncedCount) / sentCount) * 100) : 0;
+
+                      const isFailedStatus = c.status === 'failed' || (sentCount === 0 && failedCount > 0);
+                      const statusLabel = isFailedStatus ? 'failed' : (c.status || 'draft');
+                      const statusBg = isFailedStatus ? '#FEF2F2' : (c.status === 'sent' || c.status === 'completed' ? '#DCFCE7' : c.status === 'scheduled' ? '#DBEAFE' : '#FEF3C7');
+                      const statusColor = isFailedStatus ? '#DC2626' : (c.status === 'sent' || c.status === 'completed' ? '#15803D' : c.status === 'scheduled' ? '#1D4ED8' : '#B45309');
 
                       return (
                         <div
@@ -347,7 +436,7 @@ export const CampaignsPage: React.FC = () => {
                           style={{
                             background: '#FFFFFF',
                             border: '1px solid #E2E8F0',
-                            borderLeft: `4px solid ${c.status === 'sent' || c.status === 'completed' ? '#10B981' : c.status === 'scheduled' ? '#2563EB' : '#F59E0B'}`,
+                            borderLeft: `4px solid ${isFailedStatus ? '#EF4444' : c.status === 'sent' || c.status === 'completed' ? '#10B981' : c.status === 'scheduled' ? '#2563EB' : '#F59E0B'}`,
                             borderRadius: 14,
                             padding: '20px 24px',
                             boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
@@ -365,14 +454,15 @@ export const CampaignsPage: React.FC = () => {
                               <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
                                   <span style={{ fontSize: 15.5, fontWeight: 700, color: '#0F172A' }}>{c.name}</span>
-                                  <span style={{ padding: '2px 10px', borderRadius: 9999, fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', background: c.status === 'sent' || c.status === 'completed' ? '#DCFCE7' : c.status === 'scheduled' ? '#DBEAFE' : '#FEF3C7', color: c.status === 'sent' || c.status === 'completed' ? '#15803D' : c.status === 'scheduled' ? '#1D4ED8' : '#B45309' }}>
-                                    {c.status || 'draft'}
+                                  <span style={{ padding: '2px 10px', borderRadius: 9999, fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', background: statusBg, color: statusColor }}>
+                                    {statusLabel}
                                   </span>
                                   <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10.5, fontWeight: 600, background: '#F1F5F9', color: '#475569' }}>Email</span>
                                 </div>
                                 <div style={{ fontSize: 12.5, color: '#64748B', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                                   <span>📧 Subject: <strong style={{ color: '#334155' }}>{c.subject || 'No subject'}</strong></span>
                                   <span>📅 {createdDate}</span>
+                                  {totalAudience > 0 && <span>👥 {totalAudience} recipients</span>}
                                 </div>
                               </div>
                             </div>
@@ -403,6 +493,7 @@ export const CampaignsPage: React.FC = () => {
                             <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
                               {[
                                 { label: 'Sent', value: sentCount, color: '#2563EB', bg: '#DBEAFE', icon: <Send style={{ width: 11, height: 11 }} /> },
+                                { label: 'Failed', value: failedCount, color: '#DC2626', bg: '#FEF2F2', icon: <AlertTriangle style={{ width: 11, height: 11 }} /> },
                                 { label: 'Opened', value: openedCount, color: '#16A34A', bg: '#DCFCE7', icon: <Eye style={{ width: 11, height: 11 }} /> },
                                 { label: 'Clicked', value: clickedCount, color: '#7C3AED', bg: '#EDE9FE', icon: <CheckCircle2 style={{ width: 11, height: 11 }} /> },
                                 { label: 'Bounced', value: bouncedCount, color: '#EF4444', bg: '#FEF2F2', icon: <AlertTriangle style={{ width: 11, height: 11 }} /> },

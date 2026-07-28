@@ -81,7 +81,7 @@ const StatCard: React.FC<{
 );
 
 export const CampaignPerformancePage: React.FC = () => {
-  const { stats, recipients, loading } = useCampaignDetail();
+  const { stats, recipients, loading, roiData } = useCampaignDetail();
 
   if (loading) {
     return (
@@ -221,6 +221,45 @@ export const CampaignPerformancePage: React.FC = () => {
         {statCards.map((card) => (
           <StatCard key={card.label} {...card} />
         ))}
+      </div>
+
+      {/* ROI Analytics Section */}
+      <div
+        style={{
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          borderRadius: 16,
+          padding: '20px 24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        }}
+      >
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0F172A', margin: '0 0 14px' }}>
+          ROI &amp; Conversion Analytics
+        </h3>
+        {roiData && (roiData.roi !== undefined || roiData.revenue !== undefined || roiData.sales !== undefined) ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
+            <div style={{ padding: 14, background: '#F8FAFC', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>ROI</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#16A34A', marginTop: 4 }}>{roiData.roi ?? '0%'}</div>
+            </div>
+            <div style={{ padding: 14, background: '#F8FAFC', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Revenue</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#2563EB', marginTop: 4 }}>{roiData.revenue ? `₹${roiData.revenue}` : '₹0'}</div>
+            </div>
+            <div style={{ padding: 14, background: '#F8FAFC', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Conversions</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#6366F1', marginTop: 4 }}>{roiData.conversions ?? 0}</div>
+            </div>
+            <div style={{ padding: 14, background: '#F8FAFC', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Sales</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', marginTop: 4 }}>{roiData.sales ?? 0}</div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: '24px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13.5 }}>
+            No ROI analytics recorded for this campaign yet.
+          </div>
+        )}
       </div>
 
       {/* Charts Row */}

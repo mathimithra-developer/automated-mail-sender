@@ -109,6 +109,7 @@ export interface Asset {
   _id: string;
   filename: string;
   originalName: string;
+  prompt?: string;
   url: string;
   mimeType: string;
   size: number;

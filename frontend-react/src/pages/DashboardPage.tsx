@@ -24,7 +24,7 @@ import {
   CartesianGrid,
   LabelList,
 } from 'recharts';
-import { api } from '../services/api';
+import { api, campaignApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export const DashboardPage: React.FC = () => {
@@ -54,7 +54,12 @@ export const DashboardPage: React.FC = () => {
   const loadDashboard = async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     try {
-      const statsRes: any = await api.get('/api/dashboard/stats').catch(() => null);
+      const [statsRes, countRes]: [any, any] = await Promise.all([
+        api.get('/api/dashboard/stats').catch(() => null),
+        campaignApi.getOverallCount().catch(() => null),
+      ]);
+
+      const liveCampaignCount = countRes?.data?.total || countRes?.total || countRes?.count || 0;
 
       if (statsRes && statsRes.success && statsRes.stats) {
         const s = statsRes.stats;
@@ -64,7 +69,7 @@ export const DashboardPage: React.FC = () => {
           unsubCustomers: s.unsubscribed || 0,
           segments: s.segments || 0,
           templates: s.templates || 0,
-          campaigns: s.campaigns || 0,
+          campaigns: liveCampaignCount || s.campaigns || 0,
           abTests: s.abtests || 0,
           totalSent: s.totalSent || 0,
           totalOpened: s.totalOpened ?? Math.round(((s.openRate || 0) / 100) * (s.totalSent || 0)),
@@ -94,7 +99,7 @@ export const DashboardPage: React.FC = () => {
           unsubCustomers: Math.round(customers * 0.05),
           segments: sRes?.pagination?.total || 0,
           templates: tRes?.pagination?.total || 0,
-          campaigns: cmpRes?.pagination?.total || 0,
+          campaigns: liveCampaignCount || cmpRes?.pagination?.total || 0,
           abTests: abRes?.pagination?.total || 0,
         }));
         if (cmpRes?.data) setRecentCampaigns(cmpRes.data);
@@ -137,13 +142,21 @@ export const DashboardPage: React.FC = () => {
     { name: 'Inactive', count: 3 },
   ];
 
-  const chartData =
-    topSegments.length > 0
-      ? topSegments.map((seg) => ({
-          name: seg.name,
-          count: seg.cachedCount || seg.calculatedCount || 0,
-        }))
-      : sampleDefaultSegments;
+  const chartData = React.useMemo(() => {
+    if (!topSegments || topSegments.length === 0) return sampleDefaultSegments;
+    const segMap = new Map<string, { name: string; count: number }>();
+    for (const seg of topSegments) {
+      const canonicalName = seg.name || 'Unnamed Segment';
+      const key = canonicalName.trim().toLowerCase();
+      const cnt = seg.cachedCount || seg.calculatedCount || 0;
+      if (segMap.has(key)) {
+        segMap.get(key)!.count += cnt;
+      } else {
+        segMap.set(key, { name: canonicalName, count: cnt });
+      }
+    }
+    return Array.from(segMap.values());
+  }, [topSegments]);
 
   const avatarGradients = [
     'linear-gradient(135deg, #2563EB, #7C3AED)',

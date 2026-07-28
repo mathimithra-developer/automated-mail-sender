@@ -31,7 +31,8 @@ import {
   Undo,
   Info,
   Eye,
-  CheckCircle
+  CheckCircle,
+  Image as ImageIcon
 } from 'lucide-react';
 import { WhatsAppTemplate, Segment } from '../../types';
 import { api } from '../../services/api';
@@ -55,6 +56,7 @@ interface VarMappingItem {
   url?: string;
   field: string;
   fallbackValue: string;
+  previewUrl?: string;
   cardIndex?: number;
 }
 
@@ -576,7 +578,7 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
                       varIndex: 1,
                       cardIndex: cardIdx,
                       field: nameColumn || headers[0] || 'name',
-                      fallbackValue: cardComp.example?.header_handle?.[0] || '',
+                      fallbackValue: '',
                     });
                   }
                 } else if (cardComp.type === 'BUTTONS' && Array.isArray(cardComp.buttons)) {
@@ -609,6 +611,19 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
       });
     }
 
+    const templateMediaType = getTemplateMediaType(template);
+    const hasMediaHeader = ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(templateMediaType.toUpperCase());
+    const hasHeaderMapping = newMappings.some((m) => m.componentType === 'HEADER' && m.cardIndex === undefined);
+
+    if (hasMediaHeader && !hasHeaderMapping) {
+      newMappings.unshift({
+        componentType: 'HEADER',
+        varIndex: 1,
+        field: nameColumn || headers[0] || 'name',
+        fallbackValue: '',
+      });
+    }
+
     setVariableMappings(newMappings);
   };
 
@@ -626,7 +641,15 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
       if (!m.field || !m.field.trim()) {
         showToast(
           'Variable Mapping Required',
-          `Please select a CSV column for ${m.cardIndex !== undefined ? `Card ${m.cardIndex + 1} ` : ''}${m.componentType} {{${m.varIndex}}} in the selected template`,
+          `Please select a CSV column for ${m.cardIndex !== undefined ? `Card ${m.cardIndex + 1} ` : ''}${m.componentType} {{${m.varIndex}}}`,
+          'warning'
+        );
+        return false;
+      }
+      if (!m.fallbackValue || !m.fallbackValue.trim()) {
+        showToast(
+          'Fallback Value Required',
+          `Please enter a fallback value or upload media for ${m.cardIndex !== undefined ? `Card ${m.cardIndex + 1} ` : ''}${m.componentType} {{${m.varIndex}}}. This is required to prevent campaign creation failures.`,
           'warning'
         );
         return false;
@@ -656,10 +679,15 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
               type: typeStr,
               format: typeStr === 'HEADER' ? comp.format || 'TEXT' : undefined,
               show: true,
-              variables: compMappings.map((m) => ({
-                field: m.field.trim(),
-                fallbackValue: m.fallbackValue ? m.fallbackValue.trim() : '',
-              })),
+              variables: compMappings.map((m) => {
+                const isMediaHeader = typeStr === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes((comp.format || '').toUpperCase());
+                const f = m.field.trim().toLowerCase();
+                const fieldVal = isMediaHeader && !f.includes('url') && !f.includes('image') && !f.includes('media') ? '' : m.field.trim();
+                return {
+                  field: fieldVal,
+                  fallbackValue: m.fallbackValue ? m.fallbackValue.trim() : '',
+                };
+              }),
             });
           }
         }
@@ -735,6 +763,11 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
     ['HEADER', 'BODY'].forEach((typeStr) => {
       const comp = selectedTemplate.components.find((c) => c.type === typeStr);
       if (comp) {
+        const hasHeaderTextVars = comp.text && /\{\{(.*?)\}\}/.test(comp.text);
+        if (typeStr === 'HEADER' && !hasHeaderTextVars && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes((comp.format || '').toUpperCase())) {
+          return;
+        }
+
         const compMappings = variableMappings.filter(
           (m) => m.componentType === typeStr
         );
@@ -804,6 +837,17 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
       return;
     }
 
+    // Block if any media fallback is still a local blob URL (upload failed or pending)
+    const blobMapping = variableMappings.find((m) => m.fallbackValue?.startsWith('blob:'));
+    if (blobMapping) {
+      showToast(
+        'Media Upload Pending',
+        `Image for ${blobMapping.componentType} {{${blobMapping.varIndex}}} is still a local preview. Please wait for the upload to complete or enter a public HTTPS image URL.`,
+        'error'
+      );
+      return;
+    }
+
     if (publishMode === 'schedule' && !scheduleDate) {
       showToast('Schedule Date Required', 'Please select a date for scheduled delivery', 'warning');
       return;
@@ -844,6 +888,7 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
         templateId: selectedTemplate._id || selectedTemplate.id || selectedTemplate.name,
         nameColumn,
         phoneColumn,
+        publishMode,
         segmentId: selectedSegment?._id || selectedSegment?.id,
       };
 
@@ -1550,46 +1595,158 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                           {variableMappings.map((m, idx) => {
-                            const baseLabel = m.componentType === 'BUTTONS' 
-                              ? `${m.buttonType || 'Button'} "${m.buttonName || ''}"`
-                              : `${m.componentType} Template`;
+                            const isMediaHeader = m.componentType === 'HEADER' && (
+                              getTemplateMediaType(selectedTemplate) === 'IMAGE' ||
+                              getTemplateMediaType(selectedTemplate) === 'VIDEO' ||
+                              getTemplateMediaType(selectedTemplate) === 'DOCUMENT' ||
+                              m.fallbackValue.includes('http') ||
+                              m.cardIndex !== undefined
+                            );
 
-                            const label = m.cardIndex !== undefined
-                              ? `Card ${m.cardIndex + 1} • ${baseLabel}`
-                              : baseLabel;
+                            if (isMediaHeader) {
+                              const mediaType = getTemplateMediaType(selectedTemplate).toUpperCase() || 'IMAGE';
+                              return (
+                                <div key={idx} className="wa-media-upload-container">
+                                  <div className="wa-media-upload-dashed-box">
+                                    <label className="wa-media-upload-btn">
+                                      <Upload style={{ width: 15, height: 15 }} />
+                                      Upload {mediaType} from media
+                                      <input
+                                        type="file"
+                                        accept={mediaType === 'VIDEO' ? 'video/*' : mediaType === 'DOCUMENT' ? '.pdf,.doc,.docx' : 'image/*'}
+                                        style={{ display: 'none' }}
+                                        onChange={async (e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            const localUrl = URL.createObjectURL(file);
+                                            // Set local previewUrl for instant visual feedback, but keep fallbackValue empty until upload finishes
+                                            handleUpdateMapping(idx, { previewUrl: localUrl, fallbackValue: '' });
+                                            
+                                            showToast('Uploading Media', 'Preparing public download URL...', 'info');
+                                            
+                                            const formData = new FormData();
+                                            formData.append('file', file);
+                                            
+                                            try {
+                                              const uploadRes = await api.postFormData('/api/whatsapp/upload-media', formData);
+                                              const publicUrl = uploadRes?.url || uploadRes?.data?.url;
+                                              if (publicUrl) {
+                                                handleUpdateMapping(idx, { previewUrl: publicUrl, fallbackValue: publicUrl });
+                                                showToast('Upload Successful', 'Local image uploaded successfully to OwnChat cloud storage!', 'success');
+                                              } else {
+                                                throw new Error('No URL returned from upload server');
+                                              }
+                                            } catch (err: any) {
+                                              console.error('Local file upload failed:', err);
+                                              showToast('Upload Failed', 'Failed to generate public URL. Please enter a public image URL instead.', 'error');
+                                            }
+                                          }
+                                        }}
+                                      />
+                                    </label>
+                                    <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>Or</span>
+                                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', width: '100%', maxWidth: 360 }}>
+                                      <input
+                                        type="text"
+                                        className="wa-vmap-input"
+                                        style={{ flex: 1, border: !m.fallbackValue ? '1px solid #fca5a5' : undefined }}
+                                        placeholder="Enter Url (e.g. https://...) *"
+                                        value={m.fallbackValue}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          handleUpdateMapping(idx, { fallbackValue: val, previewUrl: val });
+                                        }}
+                                      />
+                                      {(m.fallbackValue || m.previewUrl) && (
+                                        <button
+                                          type="button"
+                                          style={{
+                                            padding: '6px 12px',
+                                            fontSize: 12,
+                                            fontWeight: 600,
+                                            color: '#ef4444',
+                                            border: '1px solid #fca5a5',
+                                            background: '#fef2f2',
+                                            borderRadius: 8,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 4,
+                                            whiteSpace: 'nowrap',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          onClick={() => {
+                                            handleUpdateMapping(idx, { fallbackValue: '', previewUrl: '' });
+                                            showToast('Media Discarded', 'Image removed from preview', 'info');
+                                          }}
+                                          title="Discard media image"
+                                        >
+                                          <X style={{ width: 13, height: 13 }} />
+                                          Discard
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="wa-media-preview-box">
+                                    {(() => {
+                                      const activeUrl = m.fallbackValue || m.previewUrl || '';
+                                      if (activeUrl && (activeUrl.startsWith('http') || activeUrl.startsWith('blob:'))) {
+                                        return (
+                                          <>
+                                            <img src={activeUrl} alt="Media preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <button
+                                              type="button"
+                                              className="wa-media-discard-btn"
+                                              title="Discard / Remove Media"
+                                              onClick={() => {
+                                                handleUpdateMapping(idx, { fallbackValue: '', previewUrl: '' });
+                                                showToast('Media Discarded', 'Image removed from preview', 'info');
+                                              }}
+                                            >
+                                              <X style={{ width: 14, height: 14 }} />
+                                            </button>
+                                          </>
+                                        );
+                                      }
+                                      return (
+                                        <>
+                                          <ImageIcon style={{ width: 32, height: 32, color: '#cbd5e1', marginBottom: 4 }} />
+                                          <span>No image available</span>
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                </div>
+                              );
+                            }
 
                             return (
-                              <div key={idx} className="wa-varmap-var-row">
-                                <div className="wa-varmap-var-row-top">
-                                  <span className="wa-varmap-var-index">
-                                    {'{'}{'{'}{m.varIndex}{'}'}{'}'}
-                                  </span>
-                                  <span className="wa-varmap-var-comp">{label}</span>
-                                </div>
-
-                                <div className="wa-varmap-var-fields">
-                                  <div>
-                                    <label className="wa-varmap-var-field-label">CSV Column</label>
-                                    <select
-                                      className="wa-vmap-select"
-                                      value={m.field}
-                                      onChange={(e) => handleUpdateMapping(idx, { field: e.target.value })}
-                                    >
-                                      <option value="">-- Choose Column --</option>
-                                      {headers.map((h) => <option key={h} value={h}>{h}</option>)}
-                                    </select>
-                                  </div>
-                                  <div>
-                                    <label className="wa-varmap-var-field-label">Fallback Value</label>
-                                    <input
-                                      type="text"
-                                      className="wa-vmap-input"
-                                      placeholder="Default text if empty..."
-                                      value={m.fallbackValue}
-                                      onChange={(e) => handleUpdateMapping(idx, { fallbackValue: e.target.value })}
-                                    />
-                                  </div>
-                                </div>
+                              <div key={idx} className="wa-varmap-var-row" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                <span className="wa-body-badge">
+                                  <FileText style={{ width: 13, height: 13 }} />
+                                  {m.componentType === 'BODY' ? 'Tt BODY' : m.componentType}
+                                </span>
+                                <span className="wa-varmap-var-index" style={{ borderStyle: 'dashed' }}>
+                                  {'{'}{'{'}{m.varIndex}{'}'}{'}'}
+                                </span>
+                                <select
+                                  className="wa-vmap-select"
+                                  style={{ flex: 1, height: 38 }}
+                                  value={m.field}
+                                  onChange={(e) => handleUpdateMapping(idx, { field: e.target.value })}
+                                >
+                                  <option value="">Select Value</option>
+                                  {headers.map((h) => <option key={h} value={h}>{h}</option>)}
+                                </select>
+                                <input
+                                  type="text"
+                                  className="wa-vmap-input"
+                                  style={{ flex: 1, height: 38, border: !m.fallbackValue ? '1px solid #fca5a5' : undefined }}
+                                  placeholder="Enter fallback value *"
+                                  value={m.fallbackValue}
+                                  onChange={(e) => handleUpdateMapping(idx, { fallbackValue: e.target.value })}
+                                />
                               </div>
                             );
                           })}
@@ -1669,7 +1826,7 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
                   </h4>
 
                   <div className="wa-review-grid">
-                    <div className="wa-review-mini-card">
+                    <div className="wa-review-mini-card" title={selectedSegment?.name || 'Target Segment'}>
                       <span className="label">Target Segment</span>
                       <span className="value">{selectedSegment?.name || '—'}</span>
                     </div>
@@ -1677,7 +1834,7 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
                       <span className="label">Estimated Recipients</span>
                       <span className="value">{contactCount.toLocaleString()}</span>
                     </div>
-                    <div className="wa-review-mini-card">
+                    <div className="wa-review-mini-card wa-review-card-wide" title={selectedTemplate.name}>
                       <span className="label">Template Name</span>
                       <span className="value">{selectedTemplate.name}</span>
                     </div>
@@ -1805,33 +1962,6 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
                     />
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  className={`wa-launch-btn ${launchSuccess ? 'success' : ''}`}
-                  onClick={handleNextStep}
-                  disabled={loading || launchSuccess}
-                >
-                  {launchSuccess ? (
-                    <>
-                      <CheckCircle2 style={{ width: 20, height: 20 }} />
-                      Launched Successfully!
-                    </>
-                  ) : loading ? (
-                    <>
-                      <Loader2 style={{ width: 18, height: 18, animation: 'spin 0.6s linear infinite' }} />
-                      Dispatching bulk campaign...
-                    </>
-                  ) : (
-                    <>
-                      {publishMode === 'schedule' ? (
-                        <>📅 Schedule WhatsApp Campaign</>
-                      ) : (
-                        <>🚀 Launch Bulk Campaign</>
-                      )}
-                    </>
-                  )}
-                </button>
               </div>
             </div>
           )}
@@ -1856,10 +1986,10 @@ export const WhatsAppCampaignModal: React.FC<WhatsAppCampaignModalProps> = ({
         </div>
 
         <div className="wa-footer-left-info" style={{ textAlign: 'center' }}>
-          <span>
+          <span title={selectedSegment ? `Selected: ${selectedSegment.name} (${contactCount.toLocaleString()} recs)` : ''}>
             {selectedSegment ? `Selected: ${selectedSegment.name} (${contactCount.toLocaleString()} recs)` : 'No Segment Chosen'}
           </span>
-          <span>
+          <span title={selectedTemplate ? `Template: ${selectedTemplate.name}` : ''}>
             {selectedTemplate ? `Template: ${selectedTemplate.name}` : 'No Template Selected'}
           </span>
         </div>

@@ -18,6 +18,20 @@ export const AssetsPage: React.FC = () => {
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
 
+  // Edit Prompt & Alternative Generator state
+  const [editPromptText, setEditPromptText] = useState('');
+  const [generatingAlternative, setGeneratingAlternative] = useState(false);
+
+  useEffect(() => {
+    if (viewingAsset) {
+      setEditPromptText(
+        viewingAsset.prompt ||
+        (viewingAsset.originalName ? viewingAsset.originalName.replace(/\.[^/.]+$/, '') : '') ||
+        'Modern 30% discount promo banner with vibrant yellow product studio design'
+      );
+    }
+  }, [viewingAsset]);
+
   const loadAssets = async () => {
     setLoading(true);
     try {
@@ -69,6 +83,23 @@ export const AssetsPage: React.FC = () => {
       showToast('AI Generation Failed', err.message, 'error');
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const handleGenerateAlternative = async () => {
+    if (!editPromptText.trim()) return;
+    setGeneratingAlternative(true);
+    try {
+      const res = await api.post('/api/ai/generate-image', { prompt: editPromptText });
+      showToast('Alternative Created', 'New image variant generated and saved to library', 'success');
+      if (res.data) {
+        setViewingAsset(res.data);
+      }
+      loadAssets();
+    } catch (err: any) {
+      showToast('Generation Failed', err.message, 'error');
+    } finally {
+      setGeneratingAlternative(false);
     }
   };
 
@@ -133,7 +164,7 @@ export const AssetsPage: React.FC = () => {
                 <div className="asset-actions">
                   <button
                     className="asset-action-btn"
-                    title="View Image"
+                    title="View & Edit Prompt"
                     onClick={() => setViewingAsset(ast)}
                   >
                     <Eye style={{ width: 11, height: 11 }} />
@@ -207,10 +238,10 @@ export const AssetsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Asset Preview Modal */}
+      {/* Asset Preview & Prompt Editor Modal */}
       {viewingAsset && (
         <div className="modal-overlay" style={{ display: 'flex' }} onClick={() => setViewingAsset(null)}>
-          <div className="modal-card" style={{ maxWidth: 580 }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card" style={{ maxWidth: 620 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">Asset Preview — {viewingAsset.filename}</h2>
               <button className="modal-close" onClick={() => setViewingAsset(null)}>
@@ -221,7 +252,7 @@ export const AssetsPage: React.FC = () => {
               <img
                 src={viewingAsset.url}
                 alt={viewingAsset.filename}
-                style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: 8, border: '1px solid var(--border)' }}
+                style={{ maxWidth: '100%', maxHeight: '42vh', objectFit: 'contain', borderRadius: 8, border: '1px solid var(--border)' }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', fontSize: 12, color: 'var(--text-muted)' }}>
                 <span>Size: {viewingAsset.size ? `${(viewingAsset.size / 1024).toFixed(1)} KB` : '12.4 KB'}</span>
@@ -232,6 +263,86 @@ export const AssetsPage: React.FC = () => {
                 >
                   <Link style={{ width: 12, height: 12 }} /> Copy URL
                 </button>
+              </div>
+
+              {/* Edit Prompt & Alternative Image Generator Box */}
+              <div style={{
+                width: '100%',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: 12,
+                padding: '14px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+                marginTop: 4
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Sparkles style={{ width: 14, height: 14, color: '#2563eb' }} />
+                    Edit Prompt &amp; Create Alternative Image
+                  </span>
+                </div>
+
+                <textarea
+                  className="property-input"
+                  rows={3}
+                  style={{ fontSize: 13, width: '100%', borderRadius: 8, padding: 8, background: '#ffffff', borderColor: '#cbd5e1' }}
+                  placeholder="Describe the modified image prompt or variant style..."
+                  value={editPromptText}
+                  onChange={(e) => setEditPromptText(e.target.value)}
+                />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {[
+                      'Vibrant Studio',
+                      'Minimalist Dark',
+                      '3D Render Polish',
+                      'High Contrast'
+                    ].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: 11,
+                          fontWeight: 500,
+                          color: '#475569',
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: 6,
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => setEditPromptText((prev) => `${prev} (${preset} style)`)}
+                      >
+                        + {preset}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={generatingAlternative || !editPromptText.trim()}
+                    onClick={handleGenerateAlternative}
+                    style={{
+                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                      color: '#ffffff',
+                      fontWeight: 600,
+                      fontSize: 12.5,
+                      padding: '8px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      borderRadius: 8,
+                      cursor: generatingAlternative ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <Sparkles style={{ width: 14, height: 14 }} />
+                    {generatingAlternative ? 'Generating Alternative...' : 'Generate Alternative'}
+                  </button>
+                </div>
               </div>
             </div>
             <div className="modal-footer">

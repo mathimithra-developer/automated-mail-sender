@@ -11,57 +11,90 @@ interface ErrorGroup {
   contacts: any[];
 }
 
-const WA_ERROR_META: Record<string, { description: string; retryable: boolean }> = {
-  '131026': { description: 'The recipient is not registered on WhatsApp', retryable: false },
-  '131049': { description: 'The number format is invalid or unreachable', retryable: false },
-  '131021': { description: 'Recipient opted out of business messages', retryable: false },
-  '131056': { description: 'Pair rate limit hit — too many messages to same user', retryable: true },
-  '131042': { description: 'Business account not authorized to send templates', retryable: false },
-  '130429': { description: 'Rate limit exceeded — try again later', retryable: true },
-  '100':    { description: 'Parameter missing or invalid in message', retryable: false },
-  '0':      { description: 'Unknown error — check OwnChat logs', retryable: true },
+const WA_ERROR_META: Record<string, { title: string; description: string; retryable: boolean }> = {
+  '100': {
+    title: '(#100) Invalid parameter',
+    description: 'Parameter missing, unformatted, or invalid in WhatsApp template payload',
+    retryable: false,
+  },
+  '131049': {
+    title: 'This message was not delivered to maintain healthy ecosystem engagement.',
+    description: 'Message delivery restricted by Meta Cloud API to maintain ecosystem engagement & quality',
+    retryable: false,
+  },
+  '131026': {
+    title: 'Undeliverable message',
+    description: 'The recipient phone number is not registered on WhatsApp',
+    retryable: false,
+  },
+  '131021': {
+    title: 'User opted out',
+    description: 'The recipient has opted out of receiving business messages on WhatsApp',
+    retryable: false,
+  },
+  '131056': {
+    title: 'Pair rate limit exceeded',
+    description: 'Too many messages sent to the same user in a short period',
+    retryable: true,
+  },
+  '130429': {
+    title: 'Rate limit hit',
+    description: 'Meta Cloud API rate limit exceeded — try again later',
+    retryable: true,
+  },
+  '0': {
+    title: 'Delivery Failed',
+    description: 'Message dispatch failed during transmission',
+    retryable: true,
+  },
 };
 
 export const CampaignErrorAnalysisPage: React.FC = () => {
-  const { errorsList, stats, loading } = useCampaignDetail();
+  const { campaign, errorsList, stats, loading } = useCampaignDetail();
   const { showToast } = useToast();
   const [retrying, setRetrying] = useState(false);
+
+  const isEmail = campaign?.type === 'email' || campaign?._type === 'email';
 
   const errorGroups: ErrorGroup[] = useMemo(() => {
     const map: Record<string, ErrorGroup> = {};
     errorsList.forEach((r) => {
-      const code = r.errorCode || '0';
+      const code = r.errorCode || '100';
       const meta = WA_ERROR_META[code] || WA_ERROR_META['0'];
+      const reason = r.failureReason || (isEmail ? 'Email Delivery Bounced' : meta.title);
+      const description = isEmail ? (r.failureReason || 'Email Delivery Failed') : meta.description;
+
       if (!map[code]) {
         map[code] = {
           code,
-          reason: r.failureReason || 'Unknown error',
-          description: meta.description,
-          retryable: meta.retryable,
+          reason,
+          description,
+          retryable: isEmail ? true : meta.retryable,
           contacts: [],
         };
       }
       map[code].contacts.push(r);
     });
     return Object.values(map).sort((a, b) => b.contacts.length - a.contacts.length);
-  }, [errorsList]);
+  }, [errorsList, isEmail]);
 
   const recoverableCount = errorGroups.filter((g) => g.retryable).reduce((s, g) => s + g.contacts.length, 0);
   const permanentCount = errorsList.length - recoverableCount;
 
   const exportErrors = () => {
-    const headers = ['Name', 'Phone', 'Error Code', 'Failure Reason', 'Description', 'Retry Available', 'Timestamp'];
+    const headers = ['Name', 'Phone', 'Email', 'Error Code', 'Failure Reason', 'Description', 'Retry Available', 'Timestamp'];
     const rows = errorsList.map((r) => {
       const meta = WA_ERROR_META[r.errorCode] || WA_ERROR_META['0'];
+      const desc = isEmail ? (r.failureReason || 'Email Delivery Failed') : meta.description;
       return [
-        `"${r.name}"`, `"${r.phone}"`, `"${r.errorCode || '0'}"`, `"${r.failureReason || 'Unknown'}"`,
-        `"${meta.description}"`, `"${meta.retryable ? 'Yes' : 'No'}"`, `"${r.failedTime}"`,
+        `"${r.name}"`, `"${r.phone}"`, `"${r.email || ''}"`, `"${r.errorCode || '0'}"`, `"${r.failureReason || 'Unknown'}"`,
+        `"${desc}"`, `"${isEmail || meta.retryable ? 'Yes' : 'No'}"`, `"${r.failedTime}"`,
       ].join(',');
     });
     const csv = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
     const link = document.createElement('a');
     link.href = encodeURI(csv);
-    link.download = 'campaign_errors.csv';
+    link.download = `${campaign?.name || 'campaign'}_errors.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -74,7 +107,9 @@ export const CampaignErrorAnalysisPage: React.FC = () => {
     setRetrying(false);
     showToast(
       'Retry Queued',
-      `${recoverableCount} recoverable contacts queued for retry via OwnChat`,
+      isEmail
+        ? `${recoverableCount} failed email recipients queued for retry`
+        : `${recoverableCount} recoverable contacts queued for retry via OwnChat`,
       'info'
     );
   };
@@ -134,7 +169,7 @@ export const CampaignErrorAnalysisPage: React.FC = () => {
             <span style={{ fontSize: 12, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Permanent Failures</span>
           </div>
           <div style={{ fontSize: 30, fontWeight: 800, color: '#0F172A' }}>{permanentCount}</div>
-          <span style={{ fontSize: 12, color: '#94A3B8' }}>Non-deliverable numbers</span>
+          <span style={{ fontSize: 12, color: '#94A3B8' }}>Non-deliverable numbers / addresses</span>
         </div>
 
         <div style={{ background: '#FFFFFF', border: '2px solid #E2E8F0', borderRadius: 14, padding: '18px 20px' }}>
@@ -154,7 +189,9 @@ export const CampaignErrorAnalysisPage: React.FC = () => {
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', margin: 0 }}>Failure Breakdown by Error Code</h3>
-            <p style={{ fontSize: 12.5, color: '#64748B', margin: '2px 0 0' }}>WhatsApp error classification</p>
+            <p style={{ fontSize: 12.5, color: '#64748B', margin: '2px 0 0' }}>
+              {isEmail ? 'Email delivery log & failure classification' : 'WhatsApp error classification'}
+            </p>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {recoverableCount > 0 && (

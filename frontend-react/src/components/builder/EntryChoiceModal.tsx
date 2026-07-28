@@ -1,5 +1,5 @@
 import React from 'react';
-import { FilePlus, Sparkles, RotateCcw, X } from 'lucide-react';
+import { FilePlus, Sparkles, RotateCcw, X, Layout } from 'lucide-react';
 
 interface EntryChoiceModalProps {
   isOpen: boolean;
@@ -183,7 +183,7 @@ export const EntryChoiceModal: React.FC<EntryChoiceModalProps> = ({
             </div>
           </button>
 
-          {/* Option 2: Load Default Sample Template */}
+          {/* Option 2: Browse & Choose From Templates Library */}
           <button
             type="button"
             onClick={onSelectSample}
@@ -211,19 +211,19 @@ export const EntryChoiceModal: React.FC<EntryChoiceModalProps> = ({
               e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.02)';
             }}
           >
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Sparkles size={20} />
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Layout size={20} />
             </div>
             <div>
               <h4 style={{ margin: '0 0 4px 0', fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
-                Load Sample
+                Browse Template Library
               </h4>
               <p style={{ margin: 0, fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>
-                Pre-load default newsletter layout with Heading, Paragraph & CTA.
+                Choose from starter templates or your saved library to start editing.
               </p>
             </div>
-            <div style={{ marginTop: 'auto', paddingTop: 8, fontSize: 13, fontWeight: 700, color: '#16a34a' }}>
-              Load Sample &rarr;
+            <div style={{ marginTop: 'auto', paddingTop: 8, fontSize: 13, fontWeight: 700, color: '#2563eb' }}>
+              Browse Templates &rarr;
             </div>
           </button>
         </div>
